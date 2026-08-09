@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fearnime — Admin Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050f0b;
+    --bg-elevated:rgba(215,242,228,.11);
+    --card:rgba(215,242,228,.08);
+    --card-hover:rgba(215,242,228,.15);
+    --border:rgba(90,168,134,.25);
+    --text:#e9f5ef;
+    --text-dim:#9dc0ac;
+    --text-faint:#5f8272;
+    --accent:#22c55e;
+    --accent-dim:#22c55e26;
+    --accent-2:#4ade80;
+    --ongoing:#4ade80;
+    --ended:#4a6357;
+    --radius:10px;
+    --font-display:'Bebas Neue', sans-serif;
+    --font-body:'Inter', sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background-color:#060f0d;
+    background-image:
+      radial-gradient(34% 26% at 86% 10%, rgba(94,234,150,.26) 0%, rgba(94,234,150,0) 72%),
+      radial-gradient(26% 20% at 5% 96%, rgba(45,190,140,.18) 0%, rgba(45,190,140,0) 72%),
+      radial-gradient(55% 42% at 50% -10%, rgba(20,72,52,.4) 0%, rgba(20,72,52,0) 68%);
+    background-repeat:no-repeat;
+    background-attachment:fixed, fixed, fixed;
+    color:var(--text); font-family:var(--font-body);
+  }
+  body{min-height:100vh; padding-bottom:40px;}
+  img{max-width:100%; display:block;}
+  a{color:inherit;}
+  button{font-family:inherit; cursor:pointer;}
+  input, textarea, select{font-family:inherit;}
+
+  .topbar{
+    position:sticky; top:0; z-index:30;
+    background:rgba(6,20,15,.9); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border);
+    padding:14px 20px 0;
+  }
+  .topbar-top{display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:14px;}
+  .admin-nav{display:flex; gap:4px; overflow-x:auto;}
+  .admin-nav button{
+    flex-shrink:0; padding:10px 14px; font-size:12.5px; font-weight:700; color:var(--text-faint);
+    background:transparent; border:none; border-bottom:2px solid transparent; white-space:nowrap;
+  }
+  .admin-nav button.active{color:var(--accent); border-bottom-color:var(--accent);}
+  .brand-mark{display:flex; align-items:center; gap:10px;}
+  .brand-mark-icon{width:32px; height:32px; flex-shrink:0; object-fit:contain; border-radius:9px;}
+  .brand-mark-word{font-family:var(--font-display); font-size:24px; letter-spacing:1px; color:var(--text); line-height:1;}
+  .brand-mark-word b{color:var(--accent); font-weight:400;}
+  .brand-mark small{display:block; font-family:var(--font-mono); font-size:10px; color:var(--text-faint); letter-spacing:2px; margin-top:3px;}
+  .btn{
+    padding:10px 18px; border-radius:8px; border:1px solid var(--border);
+    background:var(--bg-elevated); color:var(--text); font-weight:700; font-size:13px;
+    display:inline-flex; align-items:center; gap:7px;
+  }
+  .btn:active{background:var(--card-hover);}
+  .btn-primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .btn-danger{background:var(--accent-dim); border-color:var(--accent); color:var(--accent);}
+  .btn-ghost{background:transparent;}
+  .btn-sm{padding:7px 12px; font-size:12px;}
+  .btn svg{width:15px; height:15px;}
+
+  .wrap{max-width:900px; margin:0 auto; padding:22px 18px;}
+
+  .stats-row{display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;}
+  .stat-card{flex:1; min-width:120px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px;}
+  .stat-num{font-family:var(--font-display); font-size:26px; letter-spacing:.5px;}
+  .stat-label{font-size:11px; color:var(--text-faint); font-family:var(--font-mono); text-transform:uppercase;}
+
+  .toolbar{display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center;}
+  .search-box{flex:1; min-width:200px; padding:10px 14px; border-radius:8px; background:var(--bg-elevated); border:1px solid var(--border); color:var(--text); font-size:13px;}
+  .search-box:focus{outline:none; border-color:var(--accent);}
+
+  .anime-table{display:flex; flex-direction:column; gap:10px;}
+  .anime-row{
+    display:flex; gap:14px; align-items:center; background:var(--card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:12px;
+  }
+  .anime-row img{width:52px; aspect-ratio:2/3; object-fit:cover; border-radius:6px; background:var(--bg-elevated); flex-shrink:0;}
+  .anime-row-body{flex:1; min-width:0;}
+  .anime-row-title{font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .anime-row-meta{font-size:11.5px; color:var(--text-faint); font-family:var(--font-mono); margin-top:4px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  .pill{padding:1px 8px; border-radius:4px; font-size:10px; font-weight:800;}
+  .pill.Ongoing{background:var(--ongoing); color:#06210f;}
+  .pill.Completed{background:var(--ended); color:#fff;}
+  .anime-row-actions{display:flex; gap:8px; flex-shrink:0;}
+
+  .empty{text-align:center; padding:60px 20px; color:var(--text-faint);}
+  .empty .big{font-family:var(--font-display); font-size:22px; color:var(--text-dim); display:block; margin-bottom:6px;}
+
+  .form-header{display:flex; align-items:center; gap:12px; margin-bottom:20px;}
+  .form-header h2{font-family:var(--font-display); font-size:24px; font-weight:400; letter-spacing:.5px;}
+
+  .panel{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:18px;}
+  .panel h3{font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--text-faint); font-family:var(--font-mono); margin-bottom:16px; display:flex; align-items:center; gap:8px;}
+  .panel h3 .dot{width:6px; height:6px; background:var(--accent); display:inline-block; border-radius:1px;}
+
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;}
+  @media(max-width:600px){.field-row{grid-template-columns:1fr;}}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12px; font-weight:700; margin-bottom:6px; color:var(--text-dim);}
+  .field .hint{font-size:11px; color:var(--text-faint); margin-top:5px;}
+  .field input, .field textarea, .field select{
+    width:100%; padding:10px 12px; border-radius:8px; background:var(--bg-elevated); border:1px solid var(--border);
+    color:var(--text); font-size:13.5px;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus{outline:none; border-color:var(--accent);}
+  .field textarea{resize:vertical; min-height:90px; line-height:1.5;}
+
+  .poster-preview{width:90px; aspect-ratio:2/3; border-radius:8px; overflow:hidden; background:var(--bg-elevated); border:1px solid var(--border); margin-top:8px;}
+  .poster-preview img{width:100%; height:100%; object-fit:cover;}
+
+  .form-actions{display:flex; gap:10px; justify-content:flex-end; margin-top:6px;}
+
+  .reso-check-row{display:flex; gap:10px; flex-wrap:wrap;}
+  .reso-check{display:flex; align-items:center; gap:7px; font-size:13px; font-weight:700; color:var(--text-dim); background:var(--bg-elevated); border:1px solid var(--border); padding:9px 14px; border-radius:8px;}
+  .reso-check input{width:15px; height:15px; accent-color:var(--accent);}
+  .ep-url-fields{display:flex; flex-direction:column; gap:12px; margin-top:14px;}
+  .ep-list{display:flex; flex-direction:column; gap:8px;}
+  .ep-row{display:flex; align-items:center; gap:12px; padding:11px 12px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:8px;}
+  .ep-row-num{width:32px; height:32px; border-radius:7px; background:var(--card); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:700; font-size:13px; flex-shrink:0;}
+  .ep-row-body{flex:1; min-width:0; font-size:11.5px; color:var(--text-faint); font-family:var(--font-mono);}
+  .ep-row-body div{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .ep-row-actions{display:flex; gap:6px; flex-shrink:0;}
+  .icon-sq{width:34px; height:34px; border-radius:8px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--text-faint);}
+  .icon-sq svg{width:14px; height:14px;}
+  .icon-sq:active{background:var(--card-hover);}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--card); border:1px solid var(--border); padding:12px 22px; border-radius:999px; font-size:13px; font-weight:600; z-index:200; opacity:0; transition:all .25s ease; pointer-events:none;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .bulk-row{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:14px; position:relative;}
+  .bulk-row-num{position:absolute; top:14px; right:16px; font-family:var(--font-mono); font-size:11px; color:var(--text-faint);}
+  .bulk-row .field-row{margin-bottom:10px;}
+  .bulk-row .field{margin-bottom:10px;}
+  .add-row-btn{
+    width:100%; padding:14px; border-radius:var(--radius); border:1px dashed var(--border);
+    background:transparent; color:var(--text-dim); font-weight:700; font-size:13px; margin-bottom:18px;
+  }
+  .add-row-btn:active{background:var(--bg-elevated);}
+  .bulk-summary{font-size:11.5px; color:var(--text-faint); font-family:var(--font-mono); margin-bottom:14px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-top">
+    <div class="brand-mark" id="adminBrandMark">
+      <img class="brand-mark-icon" id="adminBrandMarkIcon" src="" alt="Fearnime">
+      <div>
+        <div class="brand-mark-word">FEAR<b>NIME</b></div>
+        <small>ADMIN PANEL</small>
+      </div>
+    </div>
+  </div>
+  <nav class="admin-nav" id="adminNav">
+    <button data-view="list">Daftar Anime</button>
+    <button data-view="add">+ Tambah Anime</button>
+    <button data-view="bulk">+ Tambah Banyak</button>
+    <button data-view="genres">Genre</button>
+    <button data-view="resolutions">Resolusi</button>
+    <button data-view="announcement">Pengumuman</button>
+    <button data-view="ads">Iklan &amp; Tiket</button>
+    <button data-view="settings">Pengaturan</button>
+  </nav>
+</div>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   Data layer — localStorage, key sama dengan index.html
+============================================================ */
+const DB_KEY_ANIMES = 'fearnime_animes';
+const DB_KEY_HISTORY = 'fearnime_history';
+const DB_KEY_FAVORITES = 'fearnime_favorites';
+const DB_KEY_ANNOUNCEMENT = 'fearnime_announcement';
+const DB_KEY_ANNOUNCEMENT_DISMISSED = 'fearnime_announcement_dismissed';
+const DB_KEY_SETTINGS = 'fearnime_settings';
+const DB_KEY_AD_SETTINGS = 'fearnime_ad_settings';
+const DB_KEY_AD_SLOTS = 'fearnime_ad_slots';
+const DB_KEY_TICKET_EVENT = 'fearnime_ticket_event';
+const AD_TYPES = ['Banner','Interstitial','Rewarded (Dapat Tiket)','Native/In-Feed'];
+const DB_KEY_GENRES = 'fearnime_genres';
+const SEED_GENRES = ['Action','Adventure','Comedy','Demons','Drama','Ecchi','Fantasy','Game','Harem','Historical'];
+const DB_KEY_RESOLUTIONS = 'fearnime_resolutions';
+const SEED_RESOLUTIONS = ['360p','480p','720p','1080p'];
+const MAX_TICKETS = 999;
+const DEFAULT_LOGO_URL = 'https://placehold.co/64x64/22c55e/06210f?text=F';
+
+const DB = {
+  getAnimes(){
+    try{ return JSON.parse(localStorage.getItem(DB_KEY_ANIMES)) || []; }catch(e){ return []; }
+  },
+  saveAnimes(list){ return safeSetItem(DB_KEY_ANIMES, JSON.stringify(list)); },
+  getAnime(id){ return this.getAnimes().find(a=>a.id===id) || null; },
+  upsertAnime(anime){
+    let list = this.getAnimes();
+    const idx = list.findIndex(a=>a.id===anime.id);
+    if(idx>-1) list[idx] = anime; else list.unshift(anime);
+    return this.saveAnimes(list);
+  },
+  bulkInsert(animes){
+    let list = this.getAnimes();
+    list = [...animes, ...list];
+    return this.saveAnimes(list);
+  },
+  deleteAnime(id){
+    this.saveAnimes(this.getAnimes().filter(a=>a.id!==id));
+  },
+  getAnnouncement(){
+    try{ return JSON.parse(localStorage.getItem(DB_KEY_ANNOUNCEMENT)) || {enabled:false, text:''}; }
+    catch(e){ return {enabled:false, text:''}; }
+  },
+  saveAnnouncement(ann){ return safeSetItem(DB_KEY_ANNOUNCEMENT, JSON.stringify(ann)); },
+  getSettings(){
+    const defaults = {logoUrl:'', splashLogoUrl:'', splashTagline:'STREAMING SEREM · SUB INDO'};
+    try{ return Object.assign({}, defaults, JSON.parse(localStorage.getItem(DB_KEY_SETTINGS))||{}); }
+    catch(e){ return defaults; }
+  },
+  saveSettings(s){ return safeSetItem(DB_KEY_SETTINGS, JSON.stringify(s)); },
+  getAdSettings(){
+    const defaults = {adGateEnabled:false, ticketsPerAd:3, ticketCostPerEpisode:1};
+    try{ return Object.assign({}, defaults, JSON.parse(localStorage.getItem(DB_KEY_AD_SETTINGS))||{}); }
+    catch(e){ return defaults; }
+  },
+  saveAdSettings(s){ return safeSetItem(DB_KEY_AD_SETTINGS, JSON.stringify(s)); },
+  getAdSlots(){
+    try{ return JSON.parse(localStorage.getItem(DB_KEY_AD_SLOTS)) || []; }
+    catch(e){ return []; }
+  },
+  saveAdSlots(list){ return safeSetItem(DB_KEY_AD_SLOTS, JSON.stringify(list)); },
+  upsertAdSlot(slot){
+    let list = this.getAdSlots();
+    const idx = list.findIndex(s=>s.id===slot.id);
+    if(idx>-1) list[idx] = slot; else list.unshift(slot);
+    this.saveAdSlots(list);
+  },
+  deleteAdSlot(id){
+    this.saveAdSlots(this.getAdSlots().filter(s=>s.id!==id));
+  },
+  getTicketEvent(){
+    try{ return JSON.parse(localStorage.getItem(DB_KEY_TICKET_EVENT)) || null; }
+    catch(e){ return null; }
+  },
+  saveTicketEvent(ev){ return safeSetItem(DB_KEY_TICKET_EVENT, JSON.stringify(ev)); },
+  getGenres(){
+    let raw = localStorage.getItem(DB_KEY_GENRES);
+    if(!raw){
+      safeSetItem(DB_KEY_GENRES, JSON.stringify(SEED_GENRES));
+      return [...SEED_GENRES];
+    }
+    try{ return JSON.parse(raw) || []; }
+    catch(e){ return []; }
+  },
+  saveGenres(list){ return safeSetItem(DB_KEY_GENRES, JSON.stringify(list)); },
+  getResolutions(){
+    let raw = localStorage.getItem(DB_KEY_RESOLUTIONS);
+    if(!raw){
+      safeSetItem(DB_KEY_RESOLUTIONS, JSON.stringify(SEED_RESOLUTIONS));
+      return [...SEED_RESOLUTIONS];
+    }
+    try{ const list = JSON.parse(raw) || []; return list.length ? list : [...SEED_RESOLUTIONS]; }
+    catch(e){ return [...SEED_RESOLUTIONS]; }
+  },
+  saveResolutions(list){ return safeSetItem(DB_KEY_RESOLUTIONS, JSON.stringify(list)); },
+  clearVisitorCache(){
+    localStorage.removeItem(DB_KEY_HISTORY);
+    localStorage.removeItem(DB_KEY_FAVORITES);
+  },
+  resetAllAnimes(){
+    safeSetItem(DB_KEY_ANIMES, JSON.stringify([]));
+  }
+};
+function getResoList(){ return DB.getResolutions(); }
+
+function uid(){ return 'a_'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function safeSetItem(key, value){
+  try{ localStorage.setItem(key, value); return true; }
+  catch(e){ console.warn('Penyimpanan lokal penuh, gagal menyimpan:', key); return false; }
+}
+function esc(str){ const d=document.createElement('div'); d.textContent = str==null?'':String(str); return d.innerHTML; }
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(window.__t); window.__t=setTimeout(()=>t.classList.remove('show'),1800);
+}
+function latestEpisodeNumber(a){
+  if(!a.episodes || !a.episodes.length) return 0;
+  return Math.max(...a.episodes.map(e=>e.number));
+}
+function renderAdminBrandMark(){
+  const s = DB.getSettings();
+  const icon = document.getElementById('adminBrandMarkIcon');
+  if(icon) icon.src = s.logoUrl || DEFAULT_LOGO_URL;
+}
+
+const ICONS = {
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+};
+
+const app = document.getElementById('app');
+let currentEditId = null;
+
+/* ============================================================
+   LIST VIEW
+============================================================ */
+let listQuery = '';
+function renderList(){
+  currentEditId = null;
+  setActiveNav('list');
+  const animes = DB.getAnimes().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  const ongoing = animes.filter(a=>a.status==='Ongoing').length;
+  let filtered = animes;
+  if(listQuery.trim()){
+    const q = listQuery.trim().toLowerCase();
+    filtered = filtered.filter(a=>a.title.toLowerCase().includes(q));
+  }
+
+  app.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-num">${animes.length}</div><div class="stat-label">Total Anime</div></div>
+      <div class="stat-card"><div class="stat-num">${ongoing}</div><div class="stat-label">Ongoing</div></div>
+      <div class="stat-card"><div class="stat-num">${animes.reduce((s,a)=>s+(a.episodes?a.episodes.length:0),0)}</div><div class="stat-label">Total Episode</div></div>
+    </div>
+    <div class="toolbar">
+      <input class="search-box" id="listSearch" placeholder="Cari judul anime..." value="${esc(listQuery)}">
+    </div>
+    <div class="anime-table">
+      ${filtered.length ? filtered.map(a=>`
+        <div class="anime-row">
+          <img src="${esc(a.poster)}" onerror="this.src='https://placehold.co/200x280/181c25/565c6b?text=No+Image'">
+          <div class="anime-row-body">
+            <div class="anime-row-title">${esc(a.title)}</div>
+            <div class="anime-row-meta">
+              <span class="pill ${a.status}">${a.status}</span>
+              <span>${esc(a.type)}</span>
+              <span>${a.episodes?a.episodes.length:0} ep</span>
+              <span>★ ${a.rating!=null?Number(a.rating).toFixed(2):'-'}</span>
+            </div>
+          </div>
+          <div class="anime-row-actions">
+            <button class="btn btn-sm" data-edit="${a.id}">${ICONS.edit} Edit</button>
+            <button class="btn btn-sm btn-danger" data-del="${a.id}">${ICONS.trash}</button>
+          </div>
+        </div>
+      `).join('') : `
+      <div class="empty">
+        <span class="big">Belum ada data</span>
+        <p>Klik "+ Tambah Anime" atau "+ Tambah Banyak" di pojok kanan atas untuk mulai menambahkan.</p>
+      </div>`}
+    </div>
+  `;
+
+  document.getElementById('listSearch').addEventListener('input', e=>{ listQuery = e.target.value; renderList(); const el=document.getElementById('listSearch'); el.focus(); el.selectionStart=el.selectionEnd=el.value.length; });
+  document.querySelectorAll('[data-edit]').forEach(btn=>btn.addEventListener('click', ()=> renderForm(btn.dataset.edit)));
+  document.querySelectorAll('[data-del]').forEach(btn=>btn.addEventListener('click', ()=>{
+    const a = DB.getAnime(btn.dataset.del);
+    if(confirm(`Hapus "${a.title}"? Semua episode akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.`)){
+      DB.deleteAnime(btn.dataset.del);
+      toast('Anime dihapus');
+      renderList();
+    }
+  }));
+}
+
+/* ============================================================
+   FORM VIEW (tambah / edit satu anime + kelola episode)
+============================================================ */
+function renderForm(editId){
+  currentEditId = editId || null;
+  const existing = editId ? DB.getAnime(editId) : null;
+  setActiveNav(existing ? 'list' : 'add');
+  const a = existing || {
+    id:null, title:'', poster:'', synopsis:'', genres:[], studio:'', type:'Series',
+    totalEpisode:0, status:'Ongoing', rating:0, episodes:[], createdAt:Date.now(), updatedAt:Date.now()
+  };
+
+  app.innerHTML = `
+    <div class="form-header">
+      <button class="btn btn-ghost btn-sm" id="backToList">${ICONS.back} Kembali</button>
+      <h2>${existing ? 'Edit Anime' : 'Tambah Anime'}</h2>
+    </div>
+
+    <div class="panel">
+      <h3><span class="dot"></span>Data Anime</h3>
+      <div class="field">
+        <label>Judul</label>
+        <input id="f_title" value="${esc(a.title)}" placeholder="Contoh: Shadow of the Crimson Ronin">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>URL Poster</label>
+          <input id="f_poster" value="${esc(a.poster)}" placeholder="https://...">
+          <div class="poster-preview"><img id="posterPreview" src="${esc(a.poster)}" onerror="this.style.opacity=0"></div>
+        </div>
+        <div class="field">
+          <label>Studio</label>
+          <input id="f_studio" value="${esc(a.studio)}" placeholder="Contoh: Kurogane Studio">
+          <label style="margin-top:14px;">Genre <span style="font-weight:400; color:var(--text-faint);">(pisahkan dengan koma)</span></label>
+          <input id="f_genres" value="${esc((a.genres||[]).join(', '))}" placeholder="Action, Fantasy, Horror">
+        </div>
+      </div>
+      <div class="field">
+        <label>Sinopsis</label>
+        <textarea id="f_synopsis" placeholder="Tulis sinopsis anime di sini...">${esc(a.synopsis)}</textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Tipe</label>
+          <select id="f_type">
+            ${['Series','Movie','OVA','Live Action'].map(t=>`<option value="${t}" ${a.type===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="f_status">
+            <option value="Ongoing" ${a.status==='Ongoing'?'selected':''}>Ongoing</option>
+            <option value="Completed" ${a.status==='Completed'?'selected':''}>Completed</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Sampai Episode Berapa <span style="font-weight:400; color:var(--text-faint);">(0 = belum diketahui)</span></label>
+          <input id="f_total" type="number" min="0" value="${a.totalEpisode||0}">
+        </div>
+        <div class="field">
+          <label>Rating <span style="font-weight:400; color:var(--text-faint);">(0 - 10)</span></label>
+          <input id="f_rating" type="number" min="0" max="10" step="0.01" value="${a.rating||0}">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveAnimeBtn">Simpan Data Anime</button>
+      </div>
+    </div>
+
+    ${a.id ? renderEpisodePanel(a) : `
+      <div class="panel">
+        <h3><span class="dot"></span>Episode</h3>
+        <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6;">
+          Simpan data anime terlebih dahulu, lalu kamu bisa menambahkan episode tanpa batas di sini tanpa perlu mengetik ulang judul, sinopsis, genre, dsb.
+        </p>
+      </div>
+    `}
+  `;
+
+  document.getElementById('backToList').addEventListener('click', renderList);
+  document.getElementById('f_poster').addEventListener('input', e=>{
+    document.getElementById('posterPreview').src = e.target.value;
+    document.getElementById('posterPreview').style.opacity = 1;
+  });
+
+  document.getElementById('saveAnimeBtn').addEventListener('click', ()=>{
+    const title = document.getElementById('f_title').value.trim();
+    if(!title){ toast('Judul wajib diisi'); return; }
+    const genresRaw = document.getElementById('f_genres').value.trim();
+    const genres = genresRaw ? genresRaw.split(',').map(g=>g.trim()).filter(Boolean) : [];
+
+    const newAnime = {
+      id: a.id || uid(),
+      title,
+      poster: document.getElementById('f_poster').value.trim(),
+      synopsis: document.getElementById('f_synopsis').value.trim(),
+      genres,
+      studio: document.getElementById('f_studio').value.trim(),
+      type: document.getElementById('f_type').value,
+      totalEpisode: parseInt(document.getElementById('f_total').value)||0,
+      status: document.getElementById('f_status').value,
+      rating: parseFloat(document.getElementById('f_rating').value)||0,
+      episodes: a.episodes || [],
+      createdAt: a.createdAt || Date.now(),
+      updatedAt: Date.now()
+    };
+    const ok = DB.upsertAnime(newAnime);
+    if(!ok){ toast('Gagal menyimpan — penyimpanan lokal penuh'); return; }
+    toast(existing ? 'Perubahan disimpan' : 'Anime ditambahkan, silakan tambah episode');
+    renderForm(newAnime.id);
+  });
+
+  if(a.id) bindEpisodePanel(a.id);
+}
+
+/* ---------- episode sub-panel: resolusi dinamis dari tab "Resolusi" ---------- */
+let epPanelAnimeId = null;
+let epFormChecked = {};
+let epFormUrls = {};
+let epEditingNum = null;
+function resetEpForm(){
+  epFormChecked = {};
+  epFormUrls = {};
+  getResoList().forEach(q=>{ epFormChecked[q] = false; epFormUrls[q] = ''; });
+  epEditingNum = null;
+}
+function renderEpisodePanel(a){
+  if(epPanelAnimeId !== a.id){ resetEpForm(); epPanelAnimeId = a.id; }
+  const episodes = [...(a.episodes||[])].sort((x,y)=>x.number-y.number);
+  const nextNum = episodes.length ? Math.max(...episodes.map(e=>e.number))+1 : 1;
+  const epNumValue = epEditingNum!=null ? epEditingNum : nextNum;
+  const resoList = getResoList();
+  return `
+    <div class="panel">
+      <h3><span class="dot"></span>Kelola Episode <span style="color:var(--text-faint); font-weight:400;">(${episodes.length} episode · terbaru: Ep ${episodes.length?latestEpisodeNumber(a):'-'})</span></h3>
+
+      <div class="field">
+        <label>No. Episode</label>
+        <input id="ep_num" type="number" min="1" value="${epNumValue}">
+      </div>
+
+      <div class="field">
+        <label>Pilih Resolusi <span style="font-weight:400;color:var(--text-faint);">(boleh pilih lebih dari satu — kelola daftar resolusi di tab "Resolusi")</span></label>
+        <div class="reso-check-row">
+          ${resoList.length ? resoList.map(q=>`
+            <label class="reso-check">
+              <input type="checkbox" class="ep_reso_chk" data-q="${esc(q)}" ${epFormChecked[q]?'checked':''}>
+              ${esc(q)}
+            </label>
+          `).join('') : `<p style="font-size:12px;color:var(--text-faint);">Belum ada resolusi. Tambahkan dulu di tab "Resolusi".</p>`}
+        </div>
+      </div>
+
+      <div id="epUrlFields" class="ep-url-fields"></div>
+
+      <div class="form-actions" style="justify-content:flex-start; margin-top:14px;">
+        <button class="btn btn-primary" id="addEpBtn">${epEditingNum!=null?'Update Episode':'+ Tambah Episode'}</button>
+        ${epEditingNum!=null?`<button class="btn btn-ghost" id="cancelEpEditBtn">Batal</button>`:''}
+      </div>
+
+      <div class="ep-list" id="epList" style="margin-top:20px;">
+        ${episodes.length ? episodes.map(e=>`
+          <div class="ep-row">
+            <div class="ep-row-num">${e.number}</div>
+            <div class="ep-row-body">
+              ${getResoList().map(q => (e.videoUrls&&e.videoUrls[q]) ? `<div>${esc(q)}: ${esc(e.videoUrls[q])}</div>` : '').join('') || '<div>Belum ada URL video</div>'}
+            </div>
+            <div class="ep-row-actions">
+              <button class="icon-sq" data-editep="${e.number}">${ICONS.edit}</button>
+              <button class="icon-sq" data-delep="${e.number}">${ICONS.trash}</button>
+            </div>
+          </div>
+        `).join('') : `<p style="font-size:12.5px; color:var(--text-faint);">Belum ada episode. Tambahkan episode pertama di atas.</p>`}
+      </div>
+    </div>
+  `;
+}
+function renderEpUrlFields(){
+  const wrap = document.getElementById('epUrlFields');
+  if(!wrap) return;
+  const checkedList = getResoList().filter(q=>epFormChecked[q]);
+  wrap.innerHTML = checkedList.length ? checkedList.map(q=>`
+    <div class="field" style="margin-bottom:0;">
+      <label>URL Video ${esc(q)}</label>
+      <input class="ep_url_input" data-q="${esc(q)}" value="${esc(epFormUrls[q]||'')}" placeholder="https://drive.google.com/...">
+    </div>
+  `).join('') : `<p style="font-size:12px;color:var(--text-faint);">Centang minimal satu resolusi di atas.</p>`;
+  wrap.querySelectorAll('.ep_url_input').forEach(inp=>{
+    inp.addEventListener('input', ()=>{ epFormUrls[inp.dataset.q] = inp.value; });
+  });
+}
+function bindEpisodePanel(animeId){
+  renderEpUrlFields();
+  document.querySelectorAll('.ep_reso_chk').forEach(chk=>{
+    chk.addEventListener('change', ()=>{
+      epFormChecked[chk.dataset.q] = chk.checked;
+      renderEpUrlFields();
+    });
+  });
+
+  const addBtn = document.getElementById('addEpBtn');
+  if(addBtn){
+    addBtn.addEventListener('click', ()=>{
+      const num = parseInt(document.getElementById('ep_num').value);
+      if(!num || num<1){ toast('Nomor episode tidak valid'); return; }
+      const videoUrls = {};
+      let hasAny = false;
+      getResoList().forEach(q=>{
+        if(epFormChecked[q] && (epFormUrls[q]||'').trim()){
+          videoUrls[q] = epFormUrls[q].trim();
+          hasAny = true;
+        }
+      });
+      if(!hasAny){ toast('Isi minimal 1 URL video untuk resolusi yang dicentang'); return; }
+      const anime = DB.getAnime(animeId);
+      if(epEditingNum==null && anime.episodes.some(e=>e.number===num)){
+        toast('Episode dengan nomor ini sudah ada'); return;
+      }
+      if(epEditingNum!=null){
+        const ep = anime.episodes.find(e=>e.number===epEditingNum);
+        ep.videoUrls = videoUrls;
+      } else {
+        anime.episodes.push({number:num, videoUrls});
+      }
+      anime.updatedAt = Date.now();
+      DB.upsertAnime(anime);
+      toast(epEditingNum!=null ? 'Episode diperbarui' : 'Episode ditambahkan');
+      resetEpForm();
+      renderForm(animeId);
+    });
+  }
+  const cancelBtn = document.getElementById('cancelEpEditBtn');
+  if(cancelBtn) cancelBtn.addEventListener('click', ()=>{ resetEpForm(); renderForm(animeId); });
+
+  document.querySelectorAll('[data-editep]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const num = parseInt(btn.dataset.editep);
+      const anime = DB.getAnime(animeId);
+      const ep = anime.episodes.find(e=>e.number===num);
+      epEditingNum = num;
+      epFormChecked = {};
+      epFormUrls = {};
+      getResoList().forEach(q=>{
+        epFormChecked[q] = !!(ep.videoUrls && ep.videoUrls[q]);
+        epFormUrls[q] = (ep.videoUrls && ep.videoUrls[q]) || '';
+      });
+      renderForm(animeId);
+    });
+  });
+  document.querySelectorAll('[data-delep]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const num = parseInt(btn.dataset.delep);
+      if(!confirm(`Hapus episode ${num}?`)) return;
+      const anime = DB.getAnime(animeId);
+      anime.episodes = anime.episodes.filter(e=>e.number!==num);
+      anime.updatedAt = Date.now();
+      DB.upsertAnime(anime);
+      if(epEditingNum===num) resetEpForm();
+      toast('Episode dihapus');
+      renderForm(animeId);
+    });
+  });
+}
+
+/* ============================================================
+   BULK ADD VIEW
+============================================================ */
+let bulkRows = [];
+function newBulkRow(){
+  return { title:'', poster:'', studio:'', type:'Series', totalEpisode:0, status:'Ongoing', rating:0, genres:'', synopsis:'' };
+}
+function renderBulkAdd(){
+  currentEditId = null;
+  setActiveNav('bulk');
+  if(bulkRows.length===0){ bulkRows = [newBulkRow(), newBulkRow(), newBulkRow()]; }
+
+  app.innerHTML = `
+    <div class="form-header">
+      <button class="btn btn-ghost btn-sm" id="backToList">${ICONS.back} Kembali</button>
+      <h2>Tambah Banyak Anime</h2>
+    </div>
+    <div class="bulk-summary">Isi judul untuk setiap anime yang ingin ditambahkan. Baris kosong (tanpa judul) otomatis dilewati. Episode &amp; resolusi video bisa ditambahkan belakangan lewat tombol Edit.</div>
+    <div id="bulkRowsWrap"></div>
+    <button class="add-row-btn" id="addBulkRowBtn">+ Tambah Baris</button>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="saveBulkBtn">Simpan Semua Anime</button>
+    </div>
+  `;
+
+  renderBulkRows();
+  document.getElementById('backToList').addEventListener('click', ()=>{ bulkRows=[]; renderList(); });
+  document.getElementById('addBulkRowBtn').addEventListener('click', ()=>{
+    bulkRows.push(newBulkRow());
+    renderBulkRows();
+  });
+  document.getElementById('saveBulkBtn').addEventListener('click', saveBulkRows);
+}
+function renderBulkRows(){
+  const wrap = document.getElementById('bulkRowsWrap');
+  wrap.innerHTML = bulkRows.map((r,i)=>`
+    <div class="bulk-row" data-idx="${i}">
+      <div class="bulk-row-num">#${i+1}</div>
+      <div class="field">
+        <label>Judul</label>
+        <input class="br_title" value="${esc(r.title)}" placeholder="Judul anime">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>URL Poster</label>
+          <input class="br_poster" value="${esc(r.poster)}" placeholder="https://...">
+        </div>
+        <div class="field">
+          <label>Studio</label>
+          <input class="br_studio" value="${esc(r.studio)}" placeholder="Nama studio">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Tipe</label>
+          <select class="br_type">
+            ${['Series','Movie','OVA','Live Action'].map(t=>`<option value="${t}" ${r.type===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select class="br_status">
+            <option value="Ongoing" ${r.status==='Ongoing'?'selected':''}>Ongoing</option>
+            <option value="Completed" ${r.status==='Completed'?'selected':''}>Completed</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Sampai Episode Berapa</label>
+          <input class="br_total" type="number" min="0" value="${r.totalEpisode||0}">
+        </div>
+        <div class="field">
+          <label>Rating (0-10)</label>
+          <input class="br_rating" type="number" min="0" max="10" step="0.01" value="${r.rating||0}">
+        </div>
+      </div>
+      <div class="field">
+        <label>Genre <span style="font-weight:400; color:var(--text-faint);">(pisahkan koma)</span></label>
+        <input class="br_genres" value="${esc(r.genres)}" placeholder="Action, Fantasy">
+      </div>
+      <div class="field">
+        <label>Sinopsis</label>
+        <textarea class="br_synopsis" style="min-height:60px;" placeholder="Sinopsis singkat...">${esc(r.synopsis)}</textarea>
+      </div>
+      <button class="btn btn-sm btn-danger bulk-remove" data-remove="${i}">${ICONS.trash} Hapus Baris</button>
+    </div>
+  `).join('');
+
+  wrap.querySelectorAll('.bulk-row').forEach(rowEl=>{
+    const idx = parseInt(rowEl.dataset.idx);
+    const bind = (cls, key)=>{
+      const el = rowEl.querySelector('.'+cls);
+      el.addEventListener('input', ()=>{ bulkRows[idx][key] = el.value; });
+      el.addEventListener('change', ()=>{ bulkRows[idx][key] = el.value; });
+    };
+    bind('br_title','title'); bind('br_poster','poster'); bind('br_studio','studio');
+    bind('br_type','type'); bind('br_status','status'); bind('br_total','totalEpisode');
+    bind('br_rating','rating'); bind('br_genres','genres'); bind('br_synopsis','synopsis');
+  });
+  wrap.querySelectorAll('[data-remove]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      bulkRows.splice(parseInt(btn.dataset.remove),1);
+      if(bulkRows.length===0) bulkRows.push(newBulkRow());
+      renderBulkRows();
+    });
+  });
+}
+function saveBulkRows(){
+  const valid = bulkRows.filter(r=>r.title && r.title.trim());
+  if(!valid.length){ toast('Isi minimal 1 judul anime'); return; }
+  const now = Date.now();
+  const animesToInsert = valid.map((r,i)=>({
+    id: uid(),
+    title: r.title.trim(),
+    poster: (r.poster||'').trim(),
+    synopsis: (r.synopsis||'').trim(),
+    genres: (r.genres||'').split(',').map(g=>g.trim()).filter(Boolean),
+    studio: (r.studio||'').trim(),
+    type: r.type || 'Series',
+    totalEpisode: parseInt(r.totalEpisode)||0,
+    status: r.status || 'Ongoing',
+    rating: parseFloat(r.rating)||0,
+    episodes: [],
+    createdAt: now + i,
+    updatedAt: now + i
+  }));
+  const ok = DB.bulkInsert(animesToInsert);
+  if(!ok){ toast('Gagal menyimpan — penyimpanan lokal penuh'); return; }
+  toast(`${animesToInsert.length} anime berhasil ditambahkan`);
+  bulkRows = [];
+  renderList();
+}
+
+/* ============================================================
+   PENGUMUMAN
+============================================================ */
+function renderAnnouncementPanel(){
+  setActiveNav('announcement');
+  const ann = DB.getAnnouncement();
+  app.innerHTML = `
+    <div class="form-header"><h2>Pengumuman</h2></div>
+    <div class="panel">
+      <h3><span class="dot"></span>Banner Informasi</h3>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:16px;">
+        Kalau diaktifkan, pesan ini akan muncul sebagai banner di bagian paling atas web pengunjung sampai pengunjung menutupnya sendiri.
+      </p>
+      <div class="field">
+        <label>Teks Pengumuman</label>
+        <textarea id="ann_text" placeholder="Contoh: Server sedang maintenance jam 22.00-24.00 WIB.">${esc(ann.text||'')}</textarea>
+      </div>
+      <div class="field" style="display:flex; align-items:center; gap:10px;">
+        <input type="checkbox" id="ann_enabled" ${ann.enabled?'checked':''} style="width:16px; height:16px;">
+        <label style="margin:0;" for="ann_enabled">Tampilkan pengumuman ini di web pengunjung</label>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveAnnBtn">Simpan Pengumuman</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('saveAnnBtn').addEventListener('click', ()=>{
+    const text = document.getElementById('ann_text').value.trim();
+    const enabled = document.getElementById('ann_enabled').checked;
+    if(enabled && !text){ toast('Isi teks pengumuman dulu'); return; }
+    DB.saveAnnouncement({ text, enabled, updatedAt: Date.now() });
+    toast('Pengumuman disimpan');
+  });
+}
+
+/* ============================================================
+   RESOLUSI — kelola daftar resolusi video (bisa tambah/hapus)
+============================================================ */
+function renderResolutionsPanel(){
+  setActiveNav('resolutions');
+  const list = DB.getResolutions();
+  app.innerHTML = `
+    <div class="form-header"><h2>Resolusi Video</h2></div>
+    <div class="panel">
+      <h3><span class="dot"></span>Kelola Resolusi <span style="color:var(--text-faint); font-weight:400;">(${list.length})</span></h3>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:16px;">
+        Resolusi di bawah ini muncul sebagai pilihan checkbox saat menambah episode, dan sebagai tombol kualitas di video player pengunjung. Urutan sesuai urutan ditambahkan.
+      </p>
+      <div class="field-row">
+        <div class="field" style="grid-column:1/-1; margin-bottom:0;">
+          <label>Tambah Resolusi Baru</label>
+          <div style="display:flex; gap:8px;">
+            <input id="reso_new" placeholder="Contoh: 240p atau 4K" style="flex:1;">
+            <button class="btn btn-primary" id="addResoBtn" style="flex-shrink:0;">+ Tambah</button>
+          </div>
+        </div>
+      </div>
+      <div class="reso-check-row" id="resoListWrap" style="margin-top:18px;">
+        ${list.length ? list.map(q=>`
+          <span class="reso-check" style="gap:10px; padding:8px 10px 8px 14px;">
+            ${esc(q)}
+            <button class="icon-sq" data-delreso="${esc(q)}" style="width:22px;height:22px;">${ICONS.trash}</button>
+          </span>
+        `).join('') : `<p style="font-size:12.5px; color:var(--text-faint);">Belum ada resolusi.</p>`}
+      </div>
+    </div>
+  `;
+  document.getElementById('addResoBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('reso_new');
+    const name = input.value.trim();
+    if(!name){ toast('Nama resolusi wajib diisi'); return; }
+    const cur = DB.getResolutions();
+    if(cur.some(q=>q.toLowerCase()===name.toLowerCase())){ toast('Resolusi ini sudah ada'); return; }
+    cur.push(name);
+    const ok = DB.saveResolutions(cur);
+    if(!ok){ toast('Gagal menyimpan — penyimpanan lokal penuh'); return; }
+    toast('Resolusi ditambahkan');
+    renderResolutionsPanel();
+  });
+  document.querySelectorAll('[data-delreso]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(!confirm(`Hapus resolusi "${btn.dataset.delreso}"? Episode yang sudah punya URL untuk resolusi ini tidak akan terhapus otomatis, hanya tidak muncul lagi sebagai pilihan baru.`)) return;
+      const cur = DB.getResolutions().filter(q=>q!==btn.dataset.delreso);
+      DB.saveResolutions(cur);
+      toast('Resolusi dihapus');
+      renderResolutionsPanel();
+    });
+  });
+}
+
+/* ============================================================
+   GENRE
+============================================================ */
+function renderGenresPanel(){
+  setActiveNav('genres');
+  const genres = DB.getGenres();
+  app.innerHTML = `
+    <div class="form-header"><h2>Genre Pilihan</h2></div>
+    <div class="panel">
+      <h3><span class="dot"></span>Kelola Genre <span style="color:var(--text-faint); font-weight:400;">(${genres.length})</span></h3>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:16px;">
+        Genre di bawah ini tampil sebagai deretan chip yang bisa digeser di halaman Home &amp; Semua Anime.
+      </p>
+      <div class="field-row">
+        <div class="field" style="grid-column:1/-1; margin-bottom:0;">
+          <label>Tambah Genre Baru</label>
+          <div style="display:flex; gap:8px;">
+            <input id="genre_new" placeholder="Contoh: Isekai" style="flex:1;">
+            <button class="btn btn-primary" id="addGenreBtn" style="flex-shrink:0;">+ Tambah</button>
+          </div>
+        </div>
+      </div>
+      <div class="reso-check-row" id="genreListWrap" style="margin-top:18px;">
+        ${genres.length ? genres.map(g=>`
+          <span class="reso-check" style="gap:10px; padding:8px 10px 8px 14px;">
+            ${esc(g)}
+            <button class="icon-sq" data-delgenre="${esc(g)}" style="width:22px;height:22px;">${ICONS.trash}</button>
+          </span>
+        `).join('') : `<p style="font-size:12.5px; color:var(--text-faint);">Belum ada genre. Tambahkan lewat form di atas.</p>`}
+      </div>
+    </div>
+  `;
+  document.getElementById('addGenreBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('genre_new');
+    const name = input.value.trim();
+    if(!name){ toast('Nama genre wajib diisi'); return; }
+    const list = DB.getGenres();
+    if(list.some(g=>g.toLowerCase()===name.toLowerCase())){ toast('Genre ini sudah ada'); return; }
+    list.push(name);
+    const ok = DB.saveGenres(list);
+    if(!ok){ toast('Gagal menyimpan — penyimpanan lokal penuh'); return; }
+    toast('Genre ditambahkan');
+    renderGenresPanel();
+  });
+  document.querySelectorAll('[data-delgenre]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const list = DB.getGenres().filter(g=>g!==btn.dataset.delgenre);
+      DB.saveGenres(list);
+      toast('Genre dihapus');
+      renderGenresPanel();
+    });
+  });
+}
+
+/* ============================================================
+   PENGATURAN
+============================================================ */
+function renderSettingsPanel(){
+  setActiveNav('settings');
+  const s = DB.getSettings();
+  app.innerHTML = `
+    <div class="form-header"><h2>Pengaturan</h2></div>
+
+    <div class="panel">
+      <h3><span class="dot"></span>Logo &amp; Loading Screen</h3>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:14px;">
+        Atur logo yang tampil di pojok kiri atas situs pengunjung, serta logo dan teks pada layar loading awal.
+      </p>
+      <div class="field">
+        <label>URL Logo Situs</label>
+        <input id="set_logo" value="${esc(s.logoUrl)}" placeholder="https://...png">
+        <div class="poster-preview" style="width:56px; aspect-ratio:1/1;"><img id="logoPreview" src="${esc(s.logoUrl || DEFAULT_LOGO_URL)}" onerror="this.style.opacity=0"></div>
+      </div>
+      <div class="field">
+        <label>URL Logo Loading Screen <span style="font-weight:400; color:var(--text-faint);">(kosongkan = sama dengan Logo Situs)</span></label>
+        <input id="set_splash_logo" value="${esc(s.splashLogoUrl)}" placeholder="https://...">
+      </div>
+      <div class="field">
+        <label>Teks Tagline Loading Screen</label>
+        <input id="set_splash_tagline" value="${esc(s.splashTagline)}" placeholder="STREAMING SEREM · SUB INDO">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveSiteSettingsBtn">Simpan Tampilan</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="dot"></span>Clear Cache</h3>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:14px;">
+        Menghapus riwayat tontonan &amp; favorit yang tersimpan di localStorage browser ini.
+      </p>
+      <button class="btn btn-danger" id="clearVisitorCacheBtn">Clear Cache Pengunjung</button>
+    </div>
+    <div class="panel">
+      <h3><span class="dot"></span>Reset Data Anime</h3>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:14px;">
+        Menghapus SEMUA data anime &amp; episode yang tersimpan. Tindakan ini tidak bisa dibatalkan.
+      </p>
+      <button class="btn btn-danger" id="resetAnimesBtn">Hapus Semua Anime</button>
+    </div>
+  `;
+  document.getElementById('set_logo').addEventListener('input', e=>{
+    const p = document.getElementById('logoPreview');
+    p.src = e.target.value || DEFAULT_LOGO_URL;
+    p.style.opacity = 1;
+  });
+  document.getElementById('saveSiteSettingsBtn').addEventListener('click', ()=>{
+    DB.saveSettings({
+      logoUrl: document.getElementById('set_logo').value.trim(),
+      splashLogoUrl: document.getElementById('set_splash_logo').value.trim(),
+      splashTagline: document.getElementById('set_splash_tagline').value.trim() || 'STREAMING SEREM · SUB INDO'
+    });
+    toast('Tampilan disimpan');
+    renderAdminBrandMark();
+  });
+  document.getElementById('clearVisitorCacheBtn').addEventListener('click', ()=>{
+    if(confirm('Hapus riwayat tontonan & favorit pengunjung? Tindakan ini tidak bisa dibatalkan.')){
+      DB.clearVisitorCache();
+      toast('Cache pengunjung berhasil dihapus');
+    }
+  });
+  document.getElementById('resetAnimesBtn').addEventListener('click', ()=>{
+    if(confirm('Hapus SEMUA data anime & episode? Tindakan ini tidak bisa dibatalkan.')){
+      DB.resetAllAnimes();
+      toast('Semua data anime dihapus');
+    }
+  });
+}
+
+/* ============================================================
+   IKLAN & TIKET
+============================================================ */
+let adSlotEditingId = null;
+function renderAdsPanel(){
+  setActiveNav('ads');
+  const s = DB.getAdSettings();
+  const slots = DB.getAdSlots();
+  const ev = DB.getTicketEvent();
+  const editing = adSlotEditingId ? slots.find(sl=>sl.id===adSlotEditingId) : null;
+
+  app.innerHTML = `
+    <div class="form-header"><h2>Iklan &amp; Tiket</h2></div>
+
+    <div class="panel">
+      <h3><span class="dot"></span>Gerbang Tiket</h3>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:14px;">
+        Kalau diaktifkan, pengunjung wajib punya tiket untuk nonton episode. Tiket didapat dengan menonton iklan tipe "Rewarded". Maksimal tiket per pengunjung tetap ${MAX_TICKETS}.
+      </p>
+      <div class="field" style="display:flex; align-items:center; gap:10px;">
+        <input type="checkbox" id="ad_gate_enabled" ${s.adGateEnabled?'checked':''} style="width:16px; height:16px;">
+        <label style="margin:0;" for="ad_gate_enabled">Wajib tonton iklan / punya tiket sebelum nonton episode</label>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Tiket didapat per 1x nonton iklan</label>
+          <input id="ad_tickets_per_ad" type="number" min="1" value="${s.ticketsPerAd}">
+        </div>
+        <div class="field">
+          <label>Tiket dibutuhkan per 1x nonton episode</label>
+          <input id="ad_cost_per_ep" type="number" min="0" value="${s.ticketCostPerEpisode}">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveAdSettingsBtn">Simpan Gerbang Tiket</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="dot"></span>${editing?'Edit Kode Iklan':'Tambah Kode Iklan'}</h3>
+      <div class="field">
+        <label>Nama Iklan</label>
+        <input id="as_name" value="${esc(editing?editing.name:'')}" placeholder="Contoh: AdX Banner Home">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Jenis Iklan</label>
+          <select id="as_type">
+            ${AD_TYPES.map(t=>`<option value="${t}" ${editing&&editing.type===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field" style="display:flex; align-items:flex-end;">
+          <label style="display:flex; align-items:center; gap:8px; margin:0;">
+            <input type="checkbox" id="as_enabled" ${!editing || editing.enabled ? 'checked':''} style="width:16px;height:16px;">
+            Aktifkan iklan ini
+          </label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Kode Iklan (HTML/JS)</label>
+        <textarea id="as_code" style="min-height:110px; font-family:var(--font-mono); font-size:12px;" placeholder="kode iklan kamu di sini">${esc(editing?editing.code:'')}</textarea>
+      </div>
+      <div class="form-actions">
+        ${editing?`<button class="btn btn-ghost" id="cancelAdSlotBtn">Batal</button>`:''}
+        <button class="btn btn-primary" id="saveAdSlotBtn">${editing?'Update Iklan':'+ Tambah Iklan'}</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="dot"></span>Daftar Kode Iklan <span style="color:var(--text-faint); font-weight:400;">(${slots.length})</span></h3>
+      <div class="ep-list">
+        ${slots.length ? slots.map(sl=>`
+          <div class="ep-row">
+            <div class="ep-row-num" style="width:auto; padding:0 10px; font-size:10.5px;">${esc(sl.type)}</div>
+            <div class="ep-row-body">
+              <div style="color:var(--text); font-weight:700; font-family:var(--font-body);">${esc(sl.name)} ${sl.enabled?'':'· nonaktif'}</div>
+              <div>${sl.code ? esc(sl.code.slice(0,60))+(sl.code.length>60?'…':'') : 'Belum ada kode'}</div>
+            </div>
+            <div class="ep-row-actions">
+              <button class="icon-sq" data-editad="${sl.id}">${ICONS.edit}</button>
+              <button class="icon-sq" data-delad="${sl.id}">${ICONS.trash}</button>
+            </div>
+          </div>
+        `).join('') : `<p style="font-size:12.5px; color:var(--text-faint);">Belum ada kode iklan.</p>`}
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="dot"></span>Tiket Gratis Event</h3>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:14px;">
+        ${ev && ev.enabled ? `<b style="color:var(--accent);">Sedang aktif:</b> "${esc(ev.name)}" — ${ev.tickets} tiket.` : 'Belum ada event aktif.'}
+      </p>
+      <div class="field-row">
+        <div class="field">
+          <label>Nama Event</label>
+          <input id="ev_name" value="${esc(ev?ev.name:'')}" placeholder="Contoh: Ramadhan 2027">
+        </div>
+        <div class="field">
+          <label>Jumlah Tiket Gratis</label>
+          <input id="ev_tickets" type="number" min="1" max="${MAX_TICKETS}" value="${ev?ev.tickets:50}">
+        </div>
+      </div>
+      <div class="form-actions" style="justify-content:flex-start;">
+        <button class="btn btn-primary" id="startEventBtn">Bagikan Sekarang</button>
+        ${ev && ev.enabled ? `<button class="btn btn-danger" id="stopEventBtn">Nonaktifkan Event</button>` : ''}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('saveAdSettingsBtn').addEventListener('click', ()=>{
+    DB.saveAdSettings({
+      adGateEnabled: document.getElementById('ad_gate_enabled').checked,
+      ticketsPerAd: parseInt(document.getElementById('ad_tickets_per_ad').value)||1,
+      ticketCostPerEpisode: parseInt(document.getElementById('ad_cost_per_ep').value)||0
+    });
+    toast('Pengaturan gerbang tiket disimpan');
+  });
+
+  document.getElementById('saveAdSlotBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('as_name').value.trim();
+    if(!name){ toast('Nama iklan wajib diisi'); return; }
+    const slot = {
+      id: editing ? editing.id : ('ad_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
+      name,
+      type: document.getElementById('as_type').value,
+      code: document.getElementById('as_code').value,
+      enabled: document.getElementById('as_enabled').checked,
+      updatedAt: Date.now()
+    };
+    DB.upsertAdSlot(slot);
+    toast(editing ? 'Iklan diperbarui' : 'Iklan ditambahkan');
+    adSlotEditingId = null;
+    renderAdsPanel();
+  });
+  const cancelAdSlotBtn = document.getElementById('cancelAdSlotBtn');
+  if(cancelAdSlotBtn) cancelAdSlotBtn.addEventListener('click', ()=>{ adSlotEditingId=null; renderAdsPanel(); });
+
+  document.querySelectorAll('[data-editad]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ adSlotEditingId = btn.dataset.editad; renderAdsPanel(); });
+  });
+  document.querySelectorAll('[data-delad]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(!confirm('Hapus kode iklan ini?')) return;
+      DB.deleteAdSlot(btn.dataset.delad);
+      if(adSlotEditingId===btn.dataset.delad) adSlotEditingId=null;
+      toast('Iklan dihapus');
+      renderAdsPanel();
+    });
+  });
+
+  document.getElementById('startEventBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('ev_name').value.trim();
+    const tickets = Math.min(MAX_TICKETS, parseInt(document.getElementById('ev_tickets').value)||0);
+    if(!name || !tickets){ toast('Isi nama event dan jumlah tiket dulu'); return; }
+    DB.saveTicketEvent({ id:'ev_'+Date.now().toString(36), name, tickets, enabled:true, updatedAt:Date.now() });
+    toast('Event tiket gratis diaktifkan');
+    renderAdsPanel();
+  });
+  const stopEventBtn = document.getElementById('stopEventBtn');
+  if(stopEventBtn){
+    stopEventBtn.addEventListener('click', ()=>{
+      const cur = DB.getTicketEvent();
+      if(cur){ cur.enabled = false; DB.saveTicketEvent(cur); }
+      toast('Event dinonaktifkan');
+      renderAdsPanel();
+    });
+  }
+}
+
+/* ============================================================
+   NAV BAR
+============================================================ */
+function setActiveNav(view){
+  document.querySelectorAll('#adminNav button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.view===view);
+  });
+}
+document.getElementById('adminNav').addEventListener('click', e=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  const view = btn.dataset.view;
+  if(view==='list') renderList();
+  else if(view==='add') renderForm(null);
+  else if(view==='bulk') renderBulkAdd();
+  else if(view==='genres') renderGenresPanel();
+  else if(view==='resolutions') renderResolutionsPanel();
+  else if(view==='announcement') renderAnnouncementPanel();
+  else if(view==='ads'){ adSlotEditingId=null; renderAdsPanel(); }
+  else if(view==='settings') renderSettingsPanel();
+});
+
+/* ============================================================
+   INIT
+============================================================ */
+renderAdminBrandMark();
+renderList();
+</script>
+</body>
+</html>
