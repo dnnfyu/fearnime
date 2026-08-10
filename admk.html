@@ -68,6 +68,7 @@
     display:inline-flex; align-items:center; gap:7px;
   }
   .btn:active{background:var(--card-hover);}
+  .btn:disabled{opacity:.5; pointer-events:none;}
   .btn-primary{background:var(--accent); border-color:var(--accent); color:#fff;}
   .btn-danger{background:var(--accent-dim); border-color:var(--accent); color:var(--accent);}
   .btn-ghost{background:transparent;}
@@ -162,11 +163,12 @@
     width:100%; max-width:360px; background:var(--card); border:1px solid var(--border); border-radius:16px;
     padding:32px 26px; text-align:center; backdrop-filter:blur(10px);
   }
-  .login-gate-logo{width:56px; height:56px; border-radius:14px; margin:0 auto 16px;}
+  .login-gate-logo{width:56px; height:56px; border-radius:14px; margin:0 auto 16px; object-fit:contain;}
   .login-gate-title{font-family:var(--font-display); font-size:26px; letter-spacing:.5px; margin-bottom:6px;}
   .login-gate-title b{color:var(--accent); font-weight:400;}
   .login-gate-sub{font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:22px;}
-  #adminGoogleBtnWrap{display:flex; justify-content:center;}
+  #adminGoogleBtnWrap{display:flex; justify-content:center; min-height:44px;}
+  .login-gate-loading{font-size:11.5px; color:var(--text-faint); font-family:var(--font-mono);}
   .login-gate-error{
     margin-top:16px; padding:10px 12px; border-radius:8px; font-size:12px; text-align:left;
     background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.4); color:#f87171; display:none;
@@ -175,9 +177,9 @@
     display:flex; align-items:center; gap:8px; padding:5px 10px 5px 5px; border-radius:999px;
     background:var(--bg-elevated); border:1px solid var(--border); flex-shrink:0;
   }
-  .admin-user-chip img{width:26px; height:26px; border-radius:50%; object-fit:cover;}
+  .admin-user-chip img{width:26px; height:26px; border-radius:50%; object-fit:cover; background:var(--card);}
   .admin-user-chip span{font-size:11.5px; font-weight:700; color:var(--text-dim); max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .admin-user-chip button{color:var(--text-faint); font-size:11px; font-weight:800; padding:0 4px;}
+  .admin-user-chip button{color:var(--text-faint); font-size:11px; font-weight:800; padding:0 4px; background:none; border:none;}
 </style>
 </head>
 <body>
@@ -186,7 +188,7 @@
     <img class="login-gate-logo" id="loginGateLogo" src="" alt="Fearnime">
     <div class="login-gate-title">FEAR<b>NIME</b></div>
     <div class="login-gate-sub">Masuk dengan akun Google admin untuk mengelola konten Fearnime.</div>
-    <div id="adminGoogleBtnWrap"></div>
+    <div id="adminGoogleBtnWrap"><span class="login-gate-loading">Memuat tombol login...</span></div>
     <div class="login-gate-error" id="loginGateError"></div>
   </div>
 </div>
@@ -279,10 +281,94 @@ async function apiWrite(method, path, body){
 }
 function forceReLogin(msg){
   clearAdminSession();
+  const shell = document.getElementById('adminShell');
+  if(shell) shell.style.display = 'none';
+  const gate = document.getElementById('loginGate');
+  if(gate) gate.style.display = 'flex';
+  showLoginError(msg);
+  initAdminGoogleAuth();
+}
+
+/* ---------- Google Sign-In (admin) ---------- */
+function decodeJwtResponse(token){
+  try{
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g,'+').replace(/_/g,'/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c=>
+      '%' + ('00'+c.charCodeAt(0).toString(16)).slice(-2)
+    ).join(''));
+    return JSON.parse(jsonPayload);
+  }catch(e){ return null; }
+}
+function showLoginError(msg){
+  const el = document.getElementById('loginGateError');
+  if(el){ el.textContent = msg; el.style.display = 'block'; }
+}
+function hideLoginError(){
+  const el = document.getElementById('loginGateError');
+  if(el){ el.style.display = 'none'; el.textContent = ''; }
+}
+function initAdminGoogleAuth(){
+  if(!window.google || !google.accounts || !google.accounts.id) return;
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleAdminCredentialResponse,
+    auto_select: false
+  });
+  const wrap = document.getElementById('adminGoogleBtnWrap');
+  if(wrap){
+    wrap.innerHTML = '';
+    google.accounts.id.renderButton(wrap, { theme:'filled_black', size:'large', shape:'pill', text:'signin_with', width:280 });
+  }
+}
+async function handleAdminCredentialResponse(response){
+  hideLoginError();
+  const payload = decodeJwtResponse(response.credential);
+  if(!payload){ showLoginError('Gagal membaca data akun Google.'); return; }
+  adminSession = {
+    token: response.credential,
+    name: payload.name || '',
+    email: payload.email || '',
+    picture: payload.picture || '',
+    exp: payload.exp
+  };
+  saveAdminSession(adminSession);
+  await enterAdminShell();
+}
+async function enterAdminShell(){
+  document.getElementById('loginGate').style.display = 'none';
+  document.getElementById('adminShell').style.display = 'block';
+  renderAdminUserChip();
+  try{
+    await loadAdminData();
+  }catch(e){
+    console.warn(e);
+    toast('Gagal memuat sebagian data dari server');
+  }
+  renderAdminBrandMark();
+  renderList();
+}
+function renderAdminUserChip(){
+  const chip = document.getElementById('adminUserChip');
+  if(!chip || !adminSession) return;
+  chip.innerHTML = `
+    <img src="${esc(adminSession.picture)}" alt="" onerror="this.style.opacity=0">
+    <span>${esc(adminSession.name || adminSession.email || 'Admin')}</span>
+    <button id="adminLogoutBtn" title="Keluar">Keluar</button>
+  `;
+  const btn = document.getElementById('adminLogoutBtn');
+  if(btn) btn.addEventListener('click', adminLogout);
+}
+function adminLogout(){
+  clearAdminSession();
+  if(window.google && google.accounts && google.accounts.id){
+    try{ google.accounts.id.disableAutoSelect(); }catch(e){}
+  }
   document.getElementById('adminShell').style.display = 'none';
   document.getElementById('loginGate').style.display = 'flex';
-  const errEl = document.getElementById('loginGateError');
-  if(errEl){ errEl.textContent = msg; errEl.style.display = 'block'; }
+  hideLoginError();
+  toast('Berhasil logout');
+  initAdminGoogleAuth();
 }
 
 /* ---------- Cache lokal, diisi dari API setelah login ---------- */
@@ -357,6 +443,7 @@ const DB = {
     const saved = await apiWrite('POST', '/api/admin/ad-slots', slot);
     const idx = CACHE.adSlots.findIndex(s=>s.id===saved.id);
     if(idx>-1) CACHE.adSlots[idx] = saved; else CACHE.adSlots.unshift(saved);
+    return saved;
   },
   async deleteAdSlot(id){
     await apiWrite('DELETE', '/api/admin/ad-slots/' + encodeURIComponent(id));
@@ -473,12 +560,20 @@ function renderList(){
 
   document.getElementById('listSearch').addEventListener('input', e=>{ listQuery = e.target.value; renderList(); const el=document.getElementById('listSearch'); el.focus(); el.selectionStart=el.selectionEnd=el.value.length; });
   document.querySelectorAll('[data-edit]').forEach(btn=>btn.addEventListener('click', ()=> renderForm(btn.dataset.edit)));
-  document.querySelectorAll('[data-del]').forEach(btn=>btn.addEventListener('click', ()=>{
+  document.querySelectorAll('[data-del]').forEach(btn=>btn.addEventListener('click', async ()=>{
     const a = DB.getAnime(btn.dataset.del);
+    if(!a) return;
     if(confirm(`Hapus "${a.title}"? Semua episode akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.`)){
-      DB.deleteAnime(btn.dataset.del);
-      toast('Anime dihapus');
-      renderList();
+      btn.disabled = true;
+      try{
+        await DB.deleteAnime(btn.dataset.del);
+        toast('Anime dihapus');
+        renderList();
+      }catch(e){
+        console.warn(e);
+        toast('Gagal menghapus di server');
+        btn.disabled = false;
+      }
     }
   }));
 }
@@ -570,7 +665,7 @@ function renderForm(editId){
     document.getElementById('posterPreview').style.opacity = 1;
   });
 
-  document.getElementById('saveAnimeBtn').addEventListener('click', ()=>{
+  document.getElementById('saveAnimeBtn').addEventListener('click', async ()=>{
     const title = document.getElementById('f_title').value.trim();
     if(!title){ toast('Judul wajib diisi'); return; }
     const genresRaw = document.getElementById('f_genres').value.trim();
@@ -591,10 +686,17 @@ function renderForm(editId){
       createdAt: a.createdAt || Date.now(),
       updatedAt: Date.now()
     };
-    const ok = DB.upsertAnime(newAnime);
-    if(!ok){ toast('Gagal menyimpan — penyimpanan lokal penuh'); return; }
-    toast(existing ? 'Perubahan disimpan' : 'Anime ditambahkan, silakan tambah episode');
-    renderForm(newAnime.id);
+    const btn = document.getElementById('saveAnimeBtn');
+    btn.disabled = true; btn.textContent = 'Menyimpan...';
+    try{
+      const saved = await DB.upsertAnime(newAnime);
+      toast(existing ? 'Perubahan disimpan' : 'Anime ditambahkan, silakan tambah episode');
+      renderForm(saved.id);
+    }catch(e){
+      console.warn(e);
+      toast('Gagal menyimpan ke server');
+      btn.disabled = false; btn.textContent = 'Simpan Data Anime';
+    }
   });
 
   if(a.id) bindEpisodePanel(a.id);
@@ -687,7 +789,7 @@ function bindEpisodePanel(animeId){
 
   const addBtn = document.getElementById('addEpBtn');
   if(addBtn){
-    addBtn.addEventListener('click', ()=>{
+    addBtn.addEventListener('click', async ()=>{
       const num = parseInt(document.getElementById('ep_num').value);
       if(!num || num<1){ toast('Nomor episode tidak valid'); return; }
       const videoUrls = {};
@@ -703,17 +805,17 @@ function bindEpisodePanel(animeId){
       if(epEditingNum==null && anime.episodes.some(e=>e.number===num)){
         toast('Episode dengan nomor ini sudah ada'); return;
       }
-      if(epEditingNum!=null){
-        const ep = anime.episodes.find(e=>e.number===epEditingNum);
-        ep.videoUrls = videoUrls;
-      } else {
-        anime.episodes.push({number:num, videoUrls});
+      addBtn.disabled = true;
+      try{
+        await DB.upsertEpisode(animeId, num, videoUrls);
+        toast(epEditingNum!=null ? 'Episode diperbarui' : 'Episode ditambahkan');
+        resetEpForm();
+        renderForm(animeId);
+      }catch(e){
+        console.warn(e);
+        toast('Gagal menyimpan episode ke server');
+        addBtn.disabled = false;
       }
-      anime.updatedAt = Date.now();
-      DB.upsertAnime(anime);
-      toast(epEditingNum!=null ? 'Episode diperbarui' : 'Episode ditambahkan');
-      resetEpForm();
-      renderForm(animeId);
     });
   }
   const cancelBtn = document.getElementById('cancelEpEditBtn');
@@ -735,16 +837,20 @@ function bindEpisodePanel(animeId){
     });
   });
   document.querySelectorAll('[data-delep]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
+    btn.addEventListener('click', async ()=>{
       const num = parseInt(btn.dataset.delep);
       if(!confirm(`Hapus episode ${num}?`)) return;
-      const anime = DB.getAnime(animeId);
-      anime.episodes = anime.episodes.filter(e=>e.number!==num);
-      anime.updatedAt = Date.now();
-      DB.upsertAnime(anime);
-      if(epEditingNum===num) resetEpForm();
-      toast('Episode dihapus');
-      renderForm(animeId);
+      btn.disabled = true;
+      try{
+        await DB.deleteEpisode(animeId, num);
+        if(epEditingNum===num) resetEpForm();
+        toast('Episode dihapus');
+        renderForm(animeId);
+      }catch(e){
+        console.warn(e);
+        toast('Gagal menghapus episode di server');
+        btn.disabled = false;
+      }
     });
   });
 }
@@ -857,7 +963,7 @@ function renderBulkRows(){
     });
   });
 }
-function saveBulkRows(){
+async function saveBulkRows(){
   const valid = bulkRows.filter(r=>r.title && r.title.trim());
   if(!valid.length){ toast('Isi minimal 1 judul anime'); return; }
   const now = Date.now();
@@ -876,11 +982,18 @@ function saveBulkRows(){
     createdAt: now + i,
     updatedAt: now + i
   }));
-  const ok = DB.bulkInsert(animesToInsert);
-  if(!ok){ toast('Gagal menyimpan — penyimpanan lokal penuh'); return; }
-  toast(`${animesToInsert.length} anime berhasil ditambahkan`);
-  bulkRows = [];
-  renderList();
+  const btn = document.getElementById('saveBulkBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Menyimpan...'; }
+  try{
+    const saved = await DB.bulkInsert(animesToInsert);
+    toast(`${saved.length} anime berhasil ditambahkan`);
+    bulkRows = [];
+    renderList();
+  }catch(e){
+    console.warn(e);
+    toast('Gagal menyimpan ke server');
+    if(btn){ btn.disabled = false; btn.textContent = 'Simpan Semua Anime'; }
+  }
 }
 
 /* ============================================================
@@ -909,12 +1022,21 @@ function renderAnnouncementPanel(){
       </div>
     </div>
   `;
-  document.getElementById('saveAnnBtn').addEventListener('click', ()=>{
+  document.getElementById('saveAnnBtn').addEventListener('click', async ()=>{
     const text = document.getElementById('ann_text').value.trim();
     const enabled = document.getElementById('ann_enabled').checked;
     if(enabled && !text){ toast('Isi teks pengumuman dulu'); return; }
-    DB.saveAnnouncement({ text, enabled, updatedAt: Date.now() });
-    toast('Pengumuman disimpan');
+    const btn = document.getElementById('saveAnnBtn');
+    btn.disabled = true;
+    try{
+      await DB.saveAnnouncement({ text, enabled, updatedAt: Date.now() });
+      toast('Pengumuman disimpan');
+    }catch(e){
+      console.warn(e);
+      toast('Gagal menyimpan ke server');
+    }finally{
+      btn.disabled = false;
+    }
   });
 }
 
@@ -950,25 +1072,37 @@ function renderResolutionsPanel(){
       </div>
     </div>
   `;
-  document.getElementById('addResoBtn').addEventListener('click', ()=>{
+  document.getElementById('addResoBtn').addEventListener('click', async ()=>{
     const input = document.getElementById('reso_new');
     const name = input.value.trim();
     if(!name){ toast('Nama resolusi wajib diisi'); return; }
     const cur = DB.getResolutions();
     if(cur.some(q=>q.toLowerCase()===name.toLowerCase())){ toast('Resolusi ini sudah ada'); return; }
-    cur.push(name);
-    const ok = DB.saveResolutions(cur);
-    if(!ok){ toast('Gagal menyimpan — penyimpanan lokal penuh'); return; }
-    toast('Resolusi ditambahkan');
-    renderResolutionsPanel();
+    const btn = document.getElementById('addResoBtn');
+    btn.disabled = true;
+    try{
+      await DB.addResolution(name);
+      toast('Resolusi ditambahkan');
+      renderResolutionsPanel();
+    }catch(e){
+      console.warn(e);
+      toast('Gagal menyimpan ke server');
+      btn.disabled = false;
+    }
   });
   document.querySelectorAll('[data-delreso]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
+    btn.addEventListener('click', async ()=>{
       if(!confirm(`Hapus resolusi "${btn.dataset.delreso}"? Episode yang sudah punya URL untuk resolusi ini tidak akan terhapus otomatis, hanya tidak muncul lagi sebagai pilihan baru.`)) return;
-      const cur = DB.getResolutions().filter(q=>q!==btn.dataset.delreso);
-      DB.saveResolutions(cur);
-      toast('Resolusi dihapus');
-      renderResolutionsPanel();
+      btn.disabled = true;
+      try{
+        await DB.deleteResolution(btn.dataset.delreso);
+        toast('Resolusi dihapus');
+        renderResolutionsPanel();
+      }catch(e){
+        console.warn(e);
+        toast('Gagal menghapus di server');
+        btn.disabled = false;
+      }
     });
   });
 }
@@ -1005,24 +1139,36 @@ function renderGenresPanel(){
       </div>
     </div>
   `;
-  document.getElementById('addGenreBtn').addEventListener('click', ()=>{
+  document.getElementById('addGenreBtn').addEventListener('click', async ()=>{
     const input = document.getElementById('genre_new');
     const name = input.value.trim();
     if(!name){ toast('Nama genre wajib diisi'); return; }
     const list = DB.getGenres();
     if(list.some(g=>g.toLowerCase()===name.toLowerCase())){ toast('Genre ini sudah ada'); return; }
-    list.push(name);
-    const ok = DB.saveGenres(list);
-    if(!ok){ toast('Gagal menyimpan — penyimpanan lokal penuh'); return; }
-    toast('Genre ditambahkan');
-    renderGenresPanel();
+    const btn = document.getElementById('addGenreBtn');
+    btn.disabled = true;
+    try{
+      await DB.addGenre(name);
+      toast('Genre ditambahkan');
+      renderGenresPanel();
+    }catch(e){
+      console.warn(e);
+      toast('Gagal menyimpan ke server');
+      btn.disabled = false;
+    }
   });
   document.querySelectorAll('[data-delgenre]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const list = DB.getGenres().filter(g=>g!==btn.dataset.delgenre);
-      DB.saveGenres(list);
-      toast('Genre dihapus');
-      renderGenresPanel();
+    btn.addEventListener('click', async ()=>{
+      btn.disabled = true;
+      try{
+        await DB.deleteGenre(btn.dataset.delgenre);
+        toast('Genre dihapus');
+        renderGenresPanel();
+      }catch(e){
+        console.warn(e);
+        toast('Gagal menghapus di server');
+        btn.disabled = false;
+      }
     });
   });
 }
@@ -1079,14 +1225,23 @@ function renderSettingsPanel(){
     p.src = e.target.value || DEFAULT_LOGO_URL;
     p.style.opacity = 1;
   });
-  document.getElementById('saveSiteSettingsBtn').addEventListener('click', ()=>{
-    DB.saveSettings({
-      logoUrl: document.getElementById('set_logo').value.trim(),
-      splashLogoUrl: document.getElementById('set_splash_logo').value.trim(),
-      splashTagline: document.getElementById('set_splash_tagline').value.trim() || 'STREAMING SEREM · SUB INDO'
-    });
-    toast('Tampilan disimpan');
-    renderAdminBrandMark();
+  document.getElementById('saveSiteSettingsBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('saveSiteSettingsBtn');
+    btn.disabled = true;
+    try{
+      await DB.saveSettings({
+        logoUrl: document.getElementById('set_logo').value.trim(),
+        splashLogoUrl: document.getElementById('set_splash_logo').value.trim(),
+        splashTagline: document.getElementById('set_splash_tagline').value.trim() || 'STREAMING SEREM · SUB INDO'
+      });
+      toast('Tampilan disimpan');
+      renderAdminBrandMark();
+    }catch(e){
+      console.warn(e);
+      toast('Gagal menyimpan ke server');
+    }finally{
+      btn.disabled = false;
+    }
   });
   document.getElementById('clearVisitorCacheBtn').addEventListener('click', ()=>{
     if(confirm('Hapus riwayat tontonan & favorit pengunjung? Tindakan ini tidak bisa dibatalkan.')){
@@ -1094,10 +1249,19 @@ function renderSettingsPanel(){
       toast('Cache pengunjung berhasil dihapus');
     }
   });
-  document.getElementById('resetAnimesBtn').addEventListener('click', ()=>{
+  document.getElementById('resetAnimesBtn').addEventListener('click', async ()=>{
     if(confirm('Hapus SEMUA data anime & episode? Tindakan ini tidak bisa dibatalkan.')){
-      DB.resetAllAnimes();
-      toast('Semua data anime dihapus');
+      const btn = document.getElementById('resetAnimesBtn');
+      btn.disabled = true;
+      try{
+        await DB.resetAllAnimes();
+        toast('Semua data anime dihapus');
+        renderSettingsPanel();
+      }catch(e){
+        console.warn(e);
+        toast('Gagal menghapus semua data di server');
+        btn.disabled = false;
+      }
     }
   });
 }
@@ -1211,16 +1375,25 @@ function renderAdsPanel(){
     </div>
   `;
 
-  document.getElementById('saveAdSettingsBtn').addEventListener('click', ()=>{
-    DB.saveAdSettings({
-      adGateEnabled: document.getElementById('ad_gate_enabled').checked,
-      ticketsPerAd: parseInt(document.getElementById('ad_tickets_per_ad').value)||1,
-      ticketCostPerEpisode: parseInt(document.getElementById('ad_cost_per_ep').value)||0
-    });
-    toast('Pengaturan gerbang tiket disimpan');
+  document.getElementById('saveAdSettingsBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('saveAdSettingsBtn');
+    btn.disabled = true;
+    try{
+      await DB.saveAdSettings({
+        adGateEnabled: document.getElementById('ad_gate_enabled').checked,
+        ticketsPerAd: parseInt(document.getElementById('ad_tickets_per_ad').value)||1,
+        ticketCostPerEpisode: parseInt(document.getElementById('ad_cost_per_ep').value)||0
+      });
+      toast('Pengaturan gerbang tiket disimpan');
+    }catch(e){
+      console.warn(e);
+      toast('Gagal menyimpan ke server');
+    }finally{
+      btn.disabled = false;
+    }
   });
 
-  document.getElementById('saveAdSlotBtn').addEventListener('click', ()=>{
+  document.getElementById('saveAdSlotBtn').addEventListener('click', async ()=>{
     const name = document.getElementById('as_name').value.trim();
     if(!name){ toast('Nama iklan wajib diisi'); return; }
     const slot = {
@@ -1231,10 +1404,18 @@ function renderAdsPanel(){
       enabled: document.getElementById('as_enabled').checked,
       updatedAt: Date.now()
     };
-    DB.upsertAdSlot(slot);
-    toast(editing ? 'Iklan diperbarui' : 'Iklan ditambahkan');
-    adSlotEditingId = null;
-    renderAdsPanel();
+    const btn = document.getElementById('saveAdSlotBtn');
+    btn.disabled = true;
+    try{
+      await DB.upsertAdSlot(slot);
+      toast(editing ? 'Iklan diperbarui' : 'Iklan ditambahkan');
+      adSlotEditingId = null;
+      renderAdsPanel();
+    }catch(e){
+      console.warn(e);
+      toast('Gagal menyimpan ke server');
+      btn.disabled = false;
+    }
   });
   const cancelAdSlotBtn = document.getElementById('cancelAdSlotBtn');
   if(cancelAdSlotBtn) cancelAdSlotBtn.addEventListener('click', ()=>{ adSlotEditingId=null; renderAdsPanel(); });
@@ -1243,30 +1424,52 @@ function renderAdsPanel(){
     btn.addEventListener('click', ()=>{ adSlotEditingId = btn.dataset.editad; renderAdsPanel(); });
   });
   document.querySelectorAll('[data-delad]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
+    btn.addEventListener('click', async ()=>{
       if(!confirm('Hapus kode iklan ini?')) return;
-      DB.deleteAdSlot(btn.dataset.delad);
-      if(adSlotEditingId===btn.dataset.delad) adSlotEditingId=null;
-      toast('Iklan dihapus');
-      renderAdsPanel();
+      btn.disabled = true;
+      try{
+        await DB.deleteAdSlot(btn.dataset.delad);
+        if(adSlotEditingId===btn.dataset.delad) adSlotEditingId=null;
+        toast('Iklan dihapus');
+        renderAdsPanel();
+      }catch(e){
+        console.warn(e);
+        toast('Gagal menghapus di server');
+        btn.disabled = false;
+      }
     });
   });
 
-  document.getElementById('startEventBtn').addEventListener('click', ()=>{
+  document.getElementById('startEventBtn').addEventListener('click', async ()=>{
     const name = document.getElementById('ev_name').value.trim();
     const tickets = Math.min(MAX_TICKETS, parseInt(document.getElementById('ev_tickets').value)||0);
     if(!name || !tickets){ toast('Isi nama event dan jumlah tiket dulu'); return; }
-    DB.saveTicketEvent({ id:'ev_'+Date.now().toString(36), name, tickets, enabled:true, updatedAt:Date.now() });
-    toast('Event tiket gratis diaktifkan');
-    renderAdsPanel();
+    const btn = document.getElementById('startEventBtn');
+    btn.disabled = true;
+    try{
+      await DB.saveTicketEvent({ id:'ev_'+Date.now().toString(36), name, tickets, enabled:true, updatedAt:Date.now() });
+      toast('Event tiket gratis diaktifkan');
+      renderAdsPanel();
+    }catch(e){
+      console.warn(e);
+      toast('Gagal menyimpan ke server');
+      btn.disabled = false;
+    }
   });
   const stopEventBtn = document.getElementById('stopEventBtn');
   if(stopEventBtn){
-    stopEventBtn.addEventListener('click', ()=>{
+    stopEventBtn.addEventListener('click', async ()=>{
       const cur = DB.getTicketEvent();
-      if(cur){ cur.enabled = false; DB.saveTicketEvent(cur); }
-      toast('Event dinonaktifkan');
-      renderAdsPanel();
+      stopEventBtn.disabled = true;
+      try{
+        if(cur){ cur.enabled = false; await DB.saveTicketEvent(cur); }
+        toast('Event dinonaktifkan');
+        renderAdsPanel();
+      }catch(e){
+        console.warn(e);
+        toast('Gagal menyimpan ke server');
+        stopEventBtn.disabled = false;
+      }
     });
   }
 }
@@ -1296,8 +1499,33 @@ document.getElementById('adminNav').addEventListener('click', e=>{
 /* ============================================================
    INIT
 ============================================================ */
-renderAdminBrandMark();
-renderList();
+(function initAdminApp(){
+  const gateLogo = document.getElementById('loginGateLogo');
+  if(gateLogo) gateLogo.src = DEFAULT_LOGO_URL;
+  // Ambil logo situs (endpoint publik) supaya logo di layar login juga sesuai,
+  // tanpa perlu login dulu.
+  apiGet('/api/settings').then(s=>{
+    if(s && s.logoUrl && gateLogo) gateLogo.src = s.logoUrl;
+  }).catch(()=>{});
+
+  adminSession = loadAdminSession();
+  if(isSessionValid(adminSession)){
+    enterAdminShell();
+    return;
+  }
+  clearAdminSession();
+
+  // Skrip Google Identity Services dimuat secara async — tunggu sampai siap
+  // sebelum mencoba menampilkan tombol login.
+  function waitForGoogle(){
+    if(window.google && google.accounts && google.accounts.id){
+      initAdminGoogleAuth();
+    } else {
+      setTimeout(waitForGoogle, 150);
+    }
+  }
+  waitForGoogle();
+})();
 </script>
 </body>
 </html>
