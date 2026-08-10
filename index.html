@@ -11,6 +11,7 @@
   :root{
     --bg:#050f0b;
     --app-max:860px;
+    --app-gutter:14px;
     --bg-elevated:rgba(215,242,228,.11);
     --card:rgba(215,242,228,.08);
     --card-hover:rgba(215,242,228,.15);
@@ -426,24 +427,44 @@
   .auth-avatar{width:58px; height:58px; border-radius:50%; object-fit:cover; border:2px solid var(--accent); flex-shrink:0; background:var(--bg-elevated);}
   .auth-profile-name{font-size:16px; font-weight:800; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .auth-profile-email{font-size:12px; color:var(--text-faint); font-family:var(--font-mono); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .auth-perso-banner{
-    margin:0 16px 16px; padding:14px; border-radius:10px;
-    background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.3);
-    display:flex; align-items:center; gap:12px;
-  }
-  .auth-perso-banner .auth-perso-ic{
-    width:36px; height:36px; border-radius:9px; background:var(--accent-dim); color:var(--accent);
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
-  }
-  .auth-perso-banner .auth-perso-ic svg{width:18px; height:18px;}
-  .auth-perso-title{font-size:13px; font-weight:800; color:var(--text);}
-  .auth-perso-sub{font-size:11px; color:var(--text-faint); margin-top:2px; line-height:1.4;}
-  .auth-profile-foot{display:flex; justify-content:flex-end; padding:0 16px 16px;}
+  .auth-profile-foot{display:flex; justify-content:flex-end; padding:16px;}
   .auth-logout-btn{
     padding:9px 18px; border-radius:8px; font-size:12.5px; font-weight:800;
     background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.5); color:#f87171;
   }
   .auth-logout-btn:active{background:rgba(239,68,68,.22);}
+
+  /* ---------- Edit Profil ---------- */
+  .edit-profile-wrap{padding:16px 14px 30px;}
+  .edit-profile-card{
+    background:var(--card); border:1px solid var(--border); border-radius:16px;
+    padding:26px 18px 22px; text-align:center; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  }
+  .edit-profile-avatar-wrap{position:relative; width:92px; height:92px; margin:0 auto;}
+  .edit-profile-avatar-fallback{
+    position:absolute; inset:0; border-radius:50%; background:linear-gradient(150deg, #1f8a52, #0f6b3a);
+    display:flex; align-items:center; justify-content:center; color:#fff; font-size:34px; font-weight:800;
+    font-family:var(--font-body); text-transform:lowercase;
+  }
+  .edit-profile-avatar{position:absolute; inset:0; width:100%; height:100%; border-radius:50%; object-fit:cover; opacity:0; transition:opacity .2s ease;}
+  .edit-profile-photo-btn{
+    display:inline-flex; align-items:center; gap:7px; margin-top:14px; padding:8px 16px; border-radius:999px;
+    background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-dim); font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  .edit-profile-photo-btn svg{width:14px; height:14px;}
+  .edit-profile-photo-btn:active{background:var(--card-hover);}
+  .edit-profile-card .field{text-align:left;}
+  .edit-profile-card .field label{display:block; font-size:12px; font-weight:700; color:var(--text-dim); margin-bottom:6px;}
+  .edit-profile-card .field input{
+    width:100%; padding:12px 14px; border-radius:10px; background:var(--bg-elevated); border:1px solid var(--border);
+    color:var(--text); font-size:14px; font-family:var(--font-body);
+  }
+  .edit-profile-card .field input:focus{outline:none; border-color:var(--accent);}
+  .edit-profile-save-btn{
+    width:100%; margin-top:16px; padding:15px; border-radius:var(--radius);
+    background:var(--bg-elevated); border:1px solid var(--border); color:var(--text); font-weight:800; font-size:14px;
+  }
+  .edit-profile-save-btn:active{background:var(--card-hover);}
 
   /* ---------- Tablet polish ---------- */
   @media(min-width:700px){
@@ -461,6 +482,55 @@
     .ad-native-label{padding:0 20px 6px;}
     .card-title{font-size:13px;}
     .detail-title{font-size:22px;}
+  }
+
+  /* ---------- Skala otomatis di layar lebih besar (tablet/desktop) ----------
+     --app-max naik bertahap sesuai lebar viewport supaya konten tidak
+     "terjebak" sempit di tengah layar besar, tapi tetap nyaman dibaca. */
+  @media(min-width:900px){
+    :root{ --app-max:980px; }
+    .grid{grid-template-columns:repeat(6,1fr);}
+  }
+  @media(min-width:1200px){
+    :root{ --app-max:1180px; }
+    .grid{grid-template-columns:repeat(7,1fr);}
+  }
+  @media(min-width:1600px){
+    :root{ --app-max:1420px; }
+    .grid{grid-template-columns:repeat(8,1fr);}
+  }
+  /* Layar sangat lebar (desktop besar): batasi lebar kartu vertikal scroll
+     supaya poster tidak melar terlalu besar */
+  @media(min-width:1200px){
+    .continue-card{width:240px;}
+  }
+
+  /* ---------- Video player: fullscreen & landscape yang lebih nyaman ---------- */
+  .player-frame-wrap:fullscreen{
+    width:100vw; height:100vh; max-width:none;
+    display:flex; align-items:center; justify-content:center; background:#000;
+  }
+  .player-frame-wrap:-webkit-full-screen{
+    width:100vw; height:100vh; max-width:none;
+  }
+  .player-frame-wrap:-moz-full-screen{
+    width:100vw; height:100vh; max-width:none;
+  }
+  .player-frame-wrap:fullscreen video,
+  .player-frame-wrap:fullscreen iframe,
+  .player-frame-wrap:-webkit-full-screen video,
+  .player-frame-wrap:-webkit-full-screen iframe{
+    width:100%; height:100%; object-fit:contain;
+  }
+  .player-frame-wrap:fullscreen .gesture-layer{ bottom:0; }
+  /* HP diputar ke landscape saat nonton: video otomatis mengisi tinggi layar
+     penuh (mirip aplikasi video native) tanpa harus tap tombol fullscreen dulu */
+  @media(orientation:landscape) and (max-height:520px){
+    .player-page .player-frame-wrap{
+      aspect-ratio:auto; width:100%; height:100vh;
+    }
+    .player-page .player-topbar{ padding:8px 12px; }
+    .player-page .player-body{ padding:12px 16px; }
   }
 </style>
 </head>
@@ -536,40 +606,62 @@ function safeSetItem(key, value){
   catch(e){ console.warn('Penyimpanan lokal penuh, gagal menyimpan:', key); return false; }
 }
 
-const SEED_ANIMES = [
-  {
-    id:'a_seed1', title:'Shadow of the Crimson Ronin',
-    poster:'https://placehold.co/400x560/181c25/ff3b4e?text=Crimson+Ronin',
-    synopsis:'Di sebuah negeri yang diselimuti kabut kutukan, seorang ronin tanpa nama mengembara membawa pedang yang membisikkan nama-nama korban.',
-    genres:['Action','Supernatural','Samurai'], studio:'Kurogane Studio', type:'Series',
-    totalEpisode:24, status:'Ongoing', rating:8.1,
-    episodes:[
-      {number:1, videoUrls:{'720p':'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'}},
-      {number:2, videoUrls:{'720p':'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'}},
-    ],
-    createdAt: Date.now()-1000*60*60*24*6, updatedAt: Date.now()-1000*60*60*2
-  },
-  {
-    id:'a_seed2', title:'Crimson Academy: Blood Pact',
-    poster:'https://placehold.co/400x560/181c25/ffb020?text=Crimson+Academy',
-    synopsis:'Sekolah elit di atas awan menyimpan rahasia gelap: setiap murid baru terikat perjanjian darah dengan penghuni lama gedung tua.',
-    genres:['Mystery','Horror','School'], studio:'Nightfall Anim', type:'Series',
-    totalEpisode:12, status:'Ongoing', rating:7.6,
-    episodes:[{number:1, videoUrls:{'480p':'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'}}],
-    createdAt: Date.now()-1000*60*60*24*2, updatedAt: Date.now()-1000*60*60*5
-  },
-];
+const API_BASE = 'https://fearnime-api.prtamadnn.workers.dev';
+
+/* Cache lokal — diisi sekali dari API saat halaman dibuka (lihat loadRemoteData()
+   di bagian Init paling bawah), lalu dipakai oleh semua fungsi render yang
+   sifatnya sinkron seperti sebelumnya. History/Favorites/Tickets/User tetap
+   di localStorage karena itu memang data per-pengunjung, bukan data situs. */
+const CACHE = {
+  animes: [],
+  genres: [],
+  resolutions: [...SEED_RESOLUTIONS],
+  settings: {logoUrl:'', splashLogoUrl:'', splashTagline:'STREAMING SEREM · SUB INDO'},
+  adSettings: {adGateEnabled:false, ticketsPerAd:3, ticketCostPerEpisode:1},
+  adSlots: [],
+  announcement: {enabled:false, text:''},
+  ticketEvent: null,
+  loaded: false
+};
+async function apiGet(path){
+  const res = await fetch(API_BASE + path);
+  if(!res.ok) throw new Error('API ' + path + ' -> ' + res.status);
+  return res.json();
+}
+async function loadRemoteData(){
+  try{
+    const [animes, genres, resolutions, settings, adSettings, adSlots, announcement, ticketEvent] = await Promise.all([
+      apiGet('/api/animes'),
+      apiGet('/api/genres'),
+      apiGet('/api/resolutions'),
+      apiGet('/api/settings'),
+      apiGet('/api/ad-settings'),
+      apiGet('/api/ad-slots'),
+      apiGet('/api/announcement'),
+      apiGet('/api/ticket-event')
+    ]);
+    CACHE.animes = animes || [];
+    CACHE.genres = genres && genres.length ? genres : [...SEED_GENRES];
+    CACHE.resolutions = resolutions && resolutions.length ? resolutions : [...SEED_RESOLUTIONS];
+    if(settings) CACHE.settings = Object.assign({}, CACHE.settings, settings);
+    if(adSettings) CACHE.adSettings = Object.assign({}, CACHE.adSettings, adSettings);
+    CACHE.adSlots = adSlots || [];
+    if(announcement) CACHE.announcement = announcement;
+    CACHE.ticketEvent = ticketEvent || null;
+  }catch(e){
+    console.warn('Gagal memuat data dari API, situs jalan dengan data kosong:', e);
+  }
+  CACHE.loaded = true;
+}
+
+function safeSetItem(key, value){
+  try{ localStorage.setItem(key, value); return true; }
+  catch(e){ console.warn('Penyimpanan lokal penuh, gagal menyimpan:', key); return false; }
+}
 
 const DB = {
-  getAnimes(){
-    let raw = localStorage.getItem(DB_KEY_ANIMES);
-    if(!raw){
-      safeSetItem(DB_KEY_ANIMES, JSON.stringify(SEED_ANIMES));
-      return JSON.parse(JSON.stringify(SEED_ANIMES));
-    }
-    try{ return JSON.parse(raw); }catch(e){ return []; }
-  },
-  getAnime(id){ return this.getAnimes().find(a=>a.id===id) || null; },
+  getAnimes(){ return CACHE.animes; },
+  getAnime(id){ return CACHE.animes.find(a=>a.id===id) || null; },
   getHistory(){
     try{ return JSON.parse(localStorage.getItem(DB_KEY_HISTORY)) || []; }catch(e){ return []; }
   },
@@ -606,24 +698,10 @@ const DB = {
     localStorage.removeItem(DB_KEY_HISTORY);
     localStorage.removeItem(DB_KEY_FAVORITES);
   },
-  getAnnouncement(){
-    try{ return JSON.parse(localStorage.getItem(DB_KEY_ANNOUNCEMENT)) || {enabled:false, text:''}; }
-    catch(e){ return {enabled:false, text:''}; }
-  },
-  getSettings(){
-    const defaults = {logoUrl:'', splashLogoUrl:'', splashTagline:'STREAMING SEREM · SUB INDO'};
-    try{ return Object.assign({}, defaults, JSON.parse(localStorage.getItem(DB_KEY_SETTINGS))||{}); }
-    catch(e){ return defaults; }
-  },
-  getAdSettings(){
-    const defaults = {adGateEnabled:false, ticketsPerAd:3, ticketCostPerEpisode:1};
-    try{ return Object.assign({}, defaults, JSON.parse(localStorage.getItem(DB_KEY_AD_SETTINGS))||{}); }
-    catch(e){ return defaults; }
-  },
-  getAdSlots(){
-    try{ return JSON.parse(localStorage.getItem(DB_KEY_AD_SLOTS)) || []; }
-    catch(e){ return []; }
-  },
+  getAnnouncement(){ return CACHE.announcement; },
+  getSettings(){ return CACHE.settings; },
+  getAdSettings(){ return CACHE.adSettings; },
+  getAdSlots(){ return CACHE.adSlots; },
   getTickets(){
     const v = parseInt(localStorage.getItem(DB_KEY_TICKETS));
     return isNaN(v) ? 0 : Math.max(0, Math.min(MAX_TICKETS, v));
@@ -636,25 +714,9 @@ const DB = {
   addTickets(delta){
     return this.setTickets(this.getTickets() + delta);
   },
-  getTicketEvent(){
-    try{ return JSON.parse(localStorage.getItem(DB_KEY_TICKET_EVENT)) || null; }
-    catch(e){ return null; }
-  },
-  getGenres(){
-    let raw = localStorage.getItem(DB_KEY_GENRES);
-    if(!raw){
-      safeSetItem(DB_KEY_GENRES, JSON.stringify(SEED_GENRES));
-      return [...SEED_GENRES];
-    }
-    try{ return JSON.parse(raw) || []; }
-    catch(e){ return []; }
-  },
-  getResolutions(){
-    try{
-      const list = JSON.parse(localStorage.getItem(DB_KEY_RESOLUTIONS)) || [];
-      return list.length ? list : [...SEED_RESOLUTIONS];
-    }catch(e){ return [...SEED_RESOLUTIONS]; }
-  },
+  getTicketEvent(){ return CACHE.ticketEvent; },
+  getGenres(){ return CACHE.genres; },
+  getResolutions(){ return CACHE.resolutions; },
   getUser(){
     try{ return JSON.parse(localStorage.getItem(DB_KEY_USER)) || null; }
     catch(e){ return null; }
@@ -810,7 +872,6 @@ function renderAuthUI(){
         <div class="auth-profile-head">
           <div class="auth-profile-head-title">Akun Saya</div>
           <div class="auth-profile-head-actions">
-            <button class="auth-chip-btn" id="viewProfileBtn">Lihat Profile</button>
             <button class="auth-chip-btn accent" id="editProfileBtn">Edit</button>
           </div>
         </div>
@@ -821,25 +882,81 @@ function renderAuthUI(){
             <div class="auth-profile-email">${esc(user.email)}</div>
           </div>
         </div>
-        <div class="auth-perso-banner">
-          <div class="auth-perso-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div>
-          <div>
-            <div class="auth-perso-title">Personalisasi Komentar</div>
-            <div class="auth-perso-sub">Ganti badge, warna &amp; gaya balasan kamu di kolom komentar.</div>
-          </div>
-        </div>
         <div class="auth-profile-foot">
           <button class="auth-logout-btn" id="logoutBtn">Log Out</button>
         </div>
       </div>
     `;
-    const viewBtn = document.getElementById('viewProfileBtn');
     const editBtn = document.getElementById('editProfileBtn');
     const logoutBtn = document.getElementById('logoutBtn');
-    if(viewBtn) viewBtn.addEventListener('click', ()=> toast(`${user.name} · ${user.email}`));
-    if(editBtn) editBtn.addEventListener('click', ()=> toast('Fitur edit profil segera hadir'));
+    if(editBtn) editBtn.addEventListener('click', ()=> navigate('/edit-profile'));
     if(logoutBtn) logoutBtn.addEventListener('click', logout);
   }
+}
+
+/* ---------- EDIT PROFIL ---------- */
+let editProfilePicDraft = null;
+function renderEditProfile(){
+  const user = DB.getUser();
+  if(!user){ navigate('/settings'); return; }
+  editProfilePicDraft = user.picture || '';
+  const initial = (user.name||'?').trim().charAt(0) || '?';
+
+  app.innerHTML = `
+    <div class="page">
+      <div class="topbar">
+        <div class="subpage-topbar">
+          <button class="back-btn-inline" id="backBtn">${ICONS.back}</button>
+          <div>
+            <div class="subpage-title">Edit Profil</div>
+          </div>
+        </div>
+      </div>
+      <div class="edit-profile-wrap">
+        <div class="edit-profile-card">
+          <div class="edit-profile-avatar-wrap">
+            <div class="edit-profile-avatar-fallback">${esc(initial)}</div>
+            <img class="edit-profile-avatar" id="editAvatarImg" src="${esc(editProfilePicDraft)}" onerror="this.style.opacity=0" onload="this.style.opacity=1">
+          </div>
+          <label class="edit-profile-photo-btn" id="changePhotoBtn">
+            ${ICONS.edit} Ganti Foto Profil
+            <input type="file" accept="image/*" id="photoFileInput" style="display:none;">
+          </label>
+          <div class="field" style="margin-top:22px;">
+            <label>Nama</label>
+            <input id="edit_name" value="${esc(user.name)}" placeholder="Nama kamu">
+          </div>
+        </div>
+        <button class="edit-profile-save-btn" id="saveProfileBtn">Simpan Perubahan</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('backBtn').addEventListener('click', ()=> navigate('/settings'));
+  const fileInput = document.getElementById('photoFileInput');
+  fileInput.addEventListener('change', ()=>{
+    const file = fileInput.files && fileInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      editProfilePicDraft = reader.result;
+      const img = document.getElementById('editAvatarImg');
+      img.src = editProfilePicDraft;
+      img.style.opacity = 1;
+    };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById('saveProfileBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('edit_name').value.trim();
+    if(!name){ toast('Nama tidak boleh kosong'); return; }
+    const cur = DB.getUser();
+    if(!cur){ navigate('/settings'); return; }
+    cur.name = name;
+    cur.picture = editProfilePicDraft || '';
+    DB.saveUser(cur);
+    toast('Profil disimpan');
+    navigate('/settings');
+  });
 }
 
 /* ============================================================
@@ -999,6 +1116,7 @@ const ICONS = {
   fullscreen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m11-5v3a2 2 0 0 1-2 2h-3"/></svg>',
   seekBack:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3.2-6.9M3 4v5h5"/></svg>',
   seekFwd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.2-6.9M21 4v5h-5"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
 };
 
 /* ============================================================
@@ -1097,6 +1215,7 @@ function route(){
   if(parts[0]==='history') return renderHistory();
   if(parts[0]==='favorites') return renderFavorites();
   if(parts[0]==='settings') return renderSettings();
+  if(parts[0]==='edit-profile') return renderEditProfile();
   return renderHome();
 }
 window.addEventListener('hashchange', route);
@@ -1731,10 +1850,7 @@ function renderSettings(){
 /* ============================================================
    Init
 ============================================================ */
-applySplashSettings();
-checkTicketEvent();
 document.getElementById('adGateCloseBtn').addEventListener('click', closeAdGate);
-route();
 
 function hideSplash(){
   const sp = document.getElementById('splashScreen');
@@ -1742,7 +1858,15 @@ function hideSplash(){
   sp.classList.add('hide');
   setTimeout(()=> sp.remove(), 550);
 }
-setTimeout(hideSplash, 900);
+
+(async function initApp(){
+  const minSplash = new Promise(r=> setTimeout(r, 700));
+  await Promise.all([loadRemoteData(), minSplash]);
+  applySplashSettings();
+  checkTicketEvent();
+  route();
+  hideSplash();
+})();
 
 /* Cek status login Google saat halaman dibuka */
 window.addEventListener('load', ()=>{

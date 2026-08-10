@@ -6,6 +6,7 @@
 <title>Fearnime — Admin Panel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     --bg:#050f0b;
@@ -152,9 +153,44 @@
   }
   .add-row-btn:active{background:var(--bg-elevated);}
   .bulk-summary{font-size:11.5px; color:var(--text-faint); font-family:var(--font-mono); margin-bottom:14px;}
+
+  /* ---------- Login gate ---------- */
+  .login-gate{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .login-gate-card{
+    width:100%; max-width:360px; background:var(--card); border:1px solid var(--border); border-radius:16px;
+    padding:32px 26px; text-align:center; backdrop-filter:blur(10px);
+  }
+  .login-gate-logo{width:56px; height:56px; border-radius:14px; margin:0 auto 16px;}
+  .login-gate-title{font-family:var(--font-display); font-size:26px; letter-spacing:.5px; margin-bottom:6px;}
+  .login-gate-title b{color:var(--accent); font-weight:400;}
+  .login-gate-sub{font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:22px;}
+  #adminGoogleBtnWrap{display:flex; justify-content:center;}
+  .login-gate-error{
+    margin-top:16px; padding:10px 12px; border-radius:8px; font-size:12px; text-align:left;
+    background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.4); color:#f87171; display:none;
+  }
+  .admin-user-chip{
+    display:flex; align-items:center; gap:8px; padding:5px 10px 5px 5px; border-radius:999px;
+    background:var(--bg-elevated); border:1px solid var(--border); flex-shrink:0;
+  }
+  .admin-user-chip img{width:26px; height:26px; border-radius:50%; object-fit:cover;}
+  .admin-user-chip span{font-size:11.5px; font-weight:700; color:var(--text-dim); max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .admin-user-chip button{color:var(--text-faint); font-size:11px; font-weight:800; padding:0 4px;}
 </style>
 </head>
 <body>
+<div class="login-gate" id="loginGate">
+  <div class="login-gate-card">
+    <img class="login-gate-logo" id="loginGateLogo" src="" alt="Fearnime">
+    <div class="login-gate-title">FEAR<b>NIME</b></div>
+    <div class="login-gate-sub">Masuk dengan akun Google admin untuk mengelola konten Fearnime.</div>
+    <div id="adminGoogleBtnWrap"></div>
+    <div class="login-gate-error" id="loginGateError"></div>
+  </div>
+</div>
+<div id="adminShell" style="display:none;">
 <div class="topbar">
   <div class="topbar-top">
     <div class="brand-mark" id="adminBrandMark">
@@ -164,6 +200,7 @@
         <small>ADMIN PANEL</small>
       </div>
     </div>
+    <div class="admin-user-chip" id="adminUserChip"></div>
   </div>
   <nav class="admin-nav" id="adminNav">
     <button data-view="list">Daftar Anime</button>
@@ -177,120 +214,188 @@
   </nav>
 </div>
 <div class="wrap" id="app"></div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
 /* ============================================================
-   Data layer — localStorage, key sama dengan index.html
+   Data layer — fetch ke Cloudflare Worker (D1), bukan localStorage lagi.
+   Baca: publik (GET). Tulis: butuh token Google admin (Authorization: Bearer).
 ============================================================ */
-const DB_KEY_ANIMES = 'fearnime_animes';
+const API_BASE = 'https://fearnime-api.prtamadnn.workers.dev';
+const GOOGLE_CLIENT_ID = '427132462258-6n8i6j3j0f97lts084fp5hvsrrpjj2vp.apps.googleusercontent.com';
 const DB_KEY_HISTORY = 'fearnime_history';
 const DB_KEY_FAVORITES = 'fearnime_favorites';
-const DB_KEY_ANNOUNCEMENT = 'fearnime_announcement';
-const DB_KEY_ANNOUNCEMENT_DISMISSED = 'fearnime_announcement_dismissed';
-const DB_KEY_SETTINGS = 'fearnime_settings';
-const DB_KEY_AD_SETTINGS = 'fearnime_ad_settings';
-const DB_KEY_AD_SLOTS = 'fearnime_ad_slots';
-const DB_KEY_TICKET_EVENT = 'fearnime_ticket_event';
+const DB_KEY_ADMIN_SESSION = 'fearnime_admin_session';
 const AD_TYPES = ['Banner','Interstitial','Rewarded (Dapat Tiket)','Native/In-Feed'];
-const DB_KEY_GENRES = 'fearnime_genres';
 const SEED_GENRES = ['Action','Adventure','Comedy','Demons','Drama','Ecchi','Fantasy','Game','Harem','Historical'];
-const DB_KEY_RESOLUTIONS = 'fearnime_resolutions';
 const SEED_RESOLUTIONS = ['360p','480p','720p','1080p'];
 const MAX_TICKETS = 999;
 const DEFAULT_LOGO_URL = 'https://placehold.co/64x64/22c55e/06210f?text=F';
 
+function safeSetItem(key, value){
+  try{ localStorage.setItem(key, value); return true; }
+  catch(e){ console.warn('Penyimpanan lokal penuh, gagal menyimpan:', key); return false; }
+}
+
+/* ---------- Sesi admin (token Google, disimpan di sessionStorage) ---------- */
+let adminSession = null; // {token, name, email, picture, exp}
+function loadAdminSession(){
+  try{ return JSON.parse(sessionStorage.getItem(DB_KEY_ADMIN_SESSION)) || null; }
+  catch(e){ return null; }
+}
+function saveAdminSession(s){ sessionStorage.setItem(DB_KEY_ADMIN_SESSION, JSON.stringify(s)); }
+function clearAdminSession(){ sessionStorage.removeItem(DB_KEY_ADMIN_SESSION); adminSession = null; }
+function isSessionValid(s){ return !!(s && s.token && s.exp && Date.now() < s.exp * 1000); }
+
+/* ---------- Fetch helpers ---------- */
+async function apiGet(path){
+  const res = await fetch(API_BASE + path);
+  if(!res.ok) throw new Error('GET ' + path + ' -> ' + res.status);
+  return res.json();
+}
+async function apiWrite(method, path, body){
+  if(!isSessionValid(adminSession)){
+    forceReLogin('Sesi login sudah habis, silakan login ulang.');
+    throw new Error('Sesi habis');
+  }
+  const res = await fetch(API_BASE + path, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + adminSession.token
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined
+  });
+  if(res.status === 401){
+    forceReLogin('Login ditolak server (token tidak valid / bukan admin).');
+    throw new Error('401 Unauthorized');
+  }
+  if(!res.ok){
+    const t = await res.text().catch(()=> '');
+    throw new Error(method + ' ' + path + ' -> ' + res.status + ' ' + t);
+  }
+  return res.json().catch(()=> ({}));
+}
+function forceReLogin(msg){
+  clearAdminSession();
+  document.getElementById('adminShell').style.display = 'none';
+  document.getElementById('loginGate').style.display = 'flex';
+  const errEl = document.getElementById('loginGateError');
+  if(errEl){ errEl.textContent = msg; errEl.style.display = 'block'; }
+}
+
+/* ---------- Cache lokal, diisi dari API setelah login ---------- */
+const CACHE = {
+  animes: [], genres: [...SEED_GENRES], resolutions: [...SEED_RESOLUTIONS],
+  settings: {logoUrl:'', splashLogoUrl:'', splashTagline:'STREAMING SEREM · SUB INDO'},
+  adSettings: {adGateEnabled:false, ticketsPerAd:3, ticketCostPerEpisode:1},
+  adSlots: [], announcement: {enabled:false, text:''}, ticketEvent: null
+};
+async function loadAdminData(){
+  const [animes, genres, resolutions, settings, adSettings, adSlots, announcement, ticketEvent] = await Promise.all([
+    apiGet('/api/animes'), apiGet('/api/genres'), apiGet('/api/resolutions'),
+    apiGet('/api/settings'), apiGet('/api/ad-settings'), apiGet('/api/ad-slots'),
+    apiGet('/api/announcement'), apiGet('/api/ticket-event')
+  ]);
+  CACHE.animes = animes || [];
+  CACHE.genres = genres && genres.length ? genres : [...SEED_GENRES];
+  CACHE.resolutions = resolutions && resolutions.length ? resolutions : [...SEED_RESOLUTIONS];
+  if(settings) CACHE.settings = Object.assign({}, CACHE.settings, settings);
+  if(adSettings) CACHE.adSettings = Object.assign({}, CACHE.adSettings, adSettings);
+  CACHE.adSlots = adSlots || [];
+  if(announcement) CACHE.announcement = announcement;
+  CACHE.ticketEvent = ticketEvent || null;
+}
+
 const DB = {
-  getAnimes(){
-    try{ return JSON.parse(localStorage.getItem(DB_KEY_ANIMES)) || []; }catch(e){ return []; }
+  getAnimes(){ return CACHE.animes; },
+  getAnime(id){ return CACHE.animes.find(a=>a.id===id) || null; },
+  async upsertAnime(anime){
+    const saved = await apiWrite('POST', '/api/admin/animes', anime);
+    const idx = CACHE.animes.findIndex(a=>a.id===saved.id);
+    if(idx>-1) CACHE.animes[idx] = saved; else CACHE.animes.unshift(saved);
+    return saved;
   },
-  saveAnimes(list){ return safeSetItem(DB_KEY_ANIMES, JSON.stringify(list)); },
-  getAnime(id){ return this.getAnimes().find(a=>a.id===id) || null; },
-  upsertAnime(anime){
-    let list = this.getAnimes();
-    const idx = list.findIndex(a=>a.id===anime.id);
-    if(idx>-1) list[idx] = anime; else list.unshift(anime);
-    return this.saveAnimes(list);
+  async bulkInsert(animes){
+    const saved = await apiWrite('POST', '/api/admin/animes/bulk', animes);
+    CACHE.animes = [...saved, ...CACHE.animes];
+    return saved;
   },
-  bulkInsert(animes){
-    let list = this.getAnimes();
-    list = [...animes, ...list];
-    return this.saveAnimes(list);
+  async deleteAnime(id){
+    await apiWrite('DELETE', '/api/admin/animes/' + encodeURIComponent(id));
+    CACHE.animes = CACHE.animes.filter(a=>a.id!==id);
   },
-  deleteAnime(id){
-    this.saveAnimes(this.getAnimes().filter(a=>a.id!==id));
+  async upsertEpisode(animeId, number, videoUrls){
+    const saved = await apiWrite('POST', '/api/admin/episodes', { animeId, number, videoUrls });
+    const idx = CACHE.animes.findIndex(a=>a.id===animeId);
+    if(idx>-1) CACHE.animes[idx] = saved;
+    return saved;
   },
-  getAnnouncement(){
-    try{ return JSON.parse(localStorage.getItem(DB_KEY_ANNOUNCEMENT)) || {enabled:false, text:''}; }
-    catch(e){ return {enabled:false, text:''}; }
+  async deleteEpisode(animeId, number){
+    await apiWrite('DELETE', `/api/admin/episodes/${encodeURIComponent(animeId)}/${number}`);
+    const anime = CACHE.animes.find(a=>a.id===animeId);
+    if(anime) anime.episodes = anime.episodes.filter(e=>e.number!==number);
   },
-  saveAnnouncement(ann){ return safeSetItem(DB_KEY_ANNOUNCEMENT, JSON.stringify(ann)); },
-  getSettings(){
-    const defaults = {logoUrl:'', splashLogoUrl:'', splashTagline:'STREAMING SEREM · SUB INDO'};
-    try{ return Object.assign({}, defaults, JSON.parse(localStorage.getItem(DB_KEY_SETTINGS))||{}); }
-    catch(e){ return defaults; }
+  getAnnouncement(){ return CACHE.announcement; },
+  async saveAnnouncement(ann){
+    await apiWrite('PUT', '/api/admin/announcement', ann);
+    CACHE.announcement = ann;
   },
-  saveSettings(s){ return safeSetItem(DB_KEY_SETTINGS, JSON.stringify(s)); },
-  getAdSettings(){
-    const defaults = {adGateEnabled:false, ticketsPerAd:3, ticketCostPerEpisode:1};
-    try{ return Object.assign({}, defaults, JSON.parse(localStorage.getItem(DB_KEY_AD_SETTINGS))||{}); }
-    catch(e){ return defaults; }
+  getSettings(){ return CACHE.settings; },
+  async saveSettings(s){
+    await apiWrite('PUT', '/api/admin/settings', s);
+    CACHE.settings = s;
   },
-  saveAdSettings(s){ return safeSetItem(DB_KEY_AD_SETTINGS, JSON.stringify(s)); },
-  getAdSlots(){
-    try{ return JSON.parse(localStorage.getItem(DB_KEY_AD_SLOTS)) || []; }
-    catch(e){ return []; }
+  getAdSettings(){ return CACHE.adSettings; },
+  async saveAdSettings(s){
+    await apiWrite('PUT', '/api/admin/ad-settings', s);
+    CACHE.adSettings = s;
   },
-  saveAdSlots(list){ return safeSetItem(DB_KEY_AD_SLOTS, JSON.stringify(list)); },
-  upsertAdSlot(slot){
-    let list = this.getAdSlots();
-    const idx = list.findIndex(s=>s.id===slot.id);
-    if(idx>-1) list[idx] = slot; else list.unshift(slot);
-    this.saveAdSlots(list);
+  getAdSlots(){ return CACHE.adSlots; },
+  async upsertAdSlot(slot){
+    const saved = await apiWrite('POST', '/api/admin/ad-slots', slot);
+    const idx = CACHE.adSlots.findIndex(s=>s.id===saved.id);
+    if(idx>-1) CACHE.adSlots[idx] = saved; else CACHE.adSlots.unshift(saved);
   },
-  deleteAdSlot(id){
-    this.saveAdSlots(this.getAdSlots().filter(s=>s.id!==id));
+  async deleteAdSlot(id){
+    await apiWrite('DELETE', '/api/admin/ad-slots/' + encodeURIComponent(id));
+    CACHE.adSlots = CACHE.adSlots.filter(s=>s.id!==id);
   },
-  getTicketEvent(){
-    try{ return JSON.parse(localStorage.getItem(DB_KEY_TICKET_EVENT)) || null; }
-    catch(e){ return null; }
+  getTicketEvent(){ return CACHE.ticketEvent; },
+  async saveTicketEvent(ev){
+    await apiWrite('PUT', '/api/admin/ticket-event', ev);
+    CACHE.ticketEvent = ev;
   },
-  saveTicketEvent(ev){ return safeSetItem(DB_KEY_TICKET_EVENT, JSON.stringify(ev)); },
-  getGenres(){
-    let raw = localStorage.getItem(DB_KEY_GENRES);
-    if(!raw){
-      safeSetItem(DB_KEY_GENRES, JSON.stringify(SEED_GENRES));
-      return [...SEED_GENRES];
-    }
-    try{ return JSON.parse(raw) || []; }
-    catch(e){ return []; }
+  getGenres(){ return CACHE.genres; },
+  async addGenre(name){
+    await apiWrite('POST', '/api/admin/genres', { name });
+    CACHE.genres.push(name);
   },
-  saveGenres(list){ return safeSetItem(DB_KEY_GENRES, JSON.stringify(list)); },
-  getResolutions(){
-    let raw = localStorage.getItem(DB_KEY_RESOLUTIONS);
-    if(!raw){
-      safeSetItem(DB_KEY_RESOLUTIONS, JSON.stringify(SEED_RESOLUTIONS));
-      return [...SEED_RESOLUTIONS];
-    }
-    try{ const list = JSON.parse(raw) || []; return list.length ? list : [...SEED_RESOLUTIONS]; }
-    catch(e){ return [...SEED_RESOLUTIONS]; }
+  async deleteGenre(name){
+    await apiWrite('DELETE', '/api/admin/genres/' + encodeURIComponent(name));
+    CACHE.genres = CACHE.genres.filter(g=>g!==name);
   },
-  saveResolutions(list){ return safeSetItem(DB_KEY_RESOLUTIONS, JSON.stringify(list)); },
+  getResolutions(){ return CACHE.resolutions; },
+  async addResolution(name){
+    await apiWrite('POST', '/api/admin/resolutions', { name });
+    CACHE.resolutions.push(name);
+  },
+  async deleteResolution(name){
+    await apiWrite('DELETE', '/api/admin/resolutions/' + encodeURIComponent(name));
+    CACHE.resolutions = CACHE.resolutions.filter(r=>r!==name);
+  },
   clearVisitorCache(){
     localStorage.removeItem(DB_KEY_HISTORY);
     localStorage.removeItem(DB_KEY_FAVORITES);
   },
-  resetAllAnimes(){
-    safeSetItem(DB_KEY_ANIMES, JSON.stringify([]));
+  async resetAllAnimes(){
+    for(const a of [...CACHE.animes]){ await this.deleteAnime(a.id); }
   }
 };
 function getResoList(){ return DB.getResolutions(); }
 
 function uid(){ return 'a_'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
-function safeSetItem(key, value){
-  try{ localStorage.setItem(key, value); return true; }
-  catch(e){ console.warn('Penyimpanan lokal penuh, gagal menyimpan:', key); return false; }
-}
 function esc(str){ const d=document.createElement('div'); d.textContent = str==null?'':String(str); return d.innerHTML; }
 function toast(msg){
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
@@ -305,6 +410,7 @@ function renderAdminBrandMark(){
   const icon = document.getElementById('adminBrandMarkIcon');
   if(icon) icon.src = s.logoUrl || DEFAULT_LOGO_URL;
 }
+
 
 const ICONS = {
   edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
