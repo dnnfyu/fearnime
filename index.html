@@ -6,6 +6,7 @@
 <title>Fearnime — Nonton Anime Sub Indo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     --bg:#050f0b;
@@ -398,6 +399,52 @@
   .splash-loader span:nth-child(3){animation-delay:.3s;}
   @keyframes splashDot{0%,80%,100%{opacity:.25; transform:translateY(0);} 40%{opacity:1; transform:translateY(-5px);}}
 
+  /* ---------- Google Auth / Profil (baru, tidak mengubah yang lama) ---------- */
+  .auth-block{padding:0 14px; margin-bottom:18px;}
+  .auth-login-card{
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:22px 18px; text-align:center; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  }
+  .auth-login-card .auth-login-title{font-family:var(--font-display); font-size:19px; letter-spacing:.5px; color:var(--text); margin-bottom:4px;}
+  .auth-login-card .auth-login-sub{font-size:12px; color:var(--text-faint); margin-bottom:16px; line-height:1.5;}
+  #googleSignInBtnWrap{display:flex; justify-content:center;}
+  .auth-profile-card{
+    background:linear-gradient(160deg, rgba(34,197,94,.12), rgba(215,242,228,.06));
+    border:1px solid var(--border); border-radius:14px; padding:0; overflow:hidden;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  }
+  .auth-profile-head{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border);}
+  .auth-profile-head-title{font-size:12px; font-weight:800; color:var(--text-dim); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:1px;}
+  .auth-profile-head-actions{display:flex; gap:8px;}
+  .auth-chip-btn{
+    padding:6px 13px; border-radius:999px; font-size:11.5px; font-weight:700;
+    background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-dim);
+  }
+  .auth-chip-btn:active{background:var(--card-hover);}
+  .auth-chip-btn.accent{background:var(--accent-dim); border-color:var(--accent); color:var(--accent);}
+  .auth-profile-body{display:flex; align-items:center; gap:14px; padding:18px 16px;}
+  .auth-avatar{width:58px; height:58px; border-radius:50%; object-fit:cover; border:2px solid var(--accent); flex-shrink:0; background:var(--bg-elevated);}
+  .auth-profile-name{font-size:16px; font-weight:800; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .auth-profile-email{font-size:12px; color:var(--text-faint); font-family:var(--font-mono); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .auth-perso-banner{
+    margin:0 16px 16px; padding:14px; border-radius:10px;
+    background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.3);
+    display:flex; align-items:center; gap:12px;
+  }
+  .auth-perso-banner .auth-perso-ic{
+    width:36px; height:36px; border-radius:9px; background:var(--accent-dim); color:var(--accent);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .auth-perso-banner .auth-perso-ic svg{width:18px; height:18px;}
+  .auth-perso-title{font-size:13px; font-weight:800; color:var(--text);}
+  .auth-perso-sub{font-size:11px; color:var(--text-faint); margin-top:2px; line-height:1.4;}
+  .auth-profile-foot{display:flex; justify-content:flex-end; padding:0 16px 16px;}
+  .auth-logout-btn{
+    padding:9px 18px; border-radius:8px; font-size:12.5px; font-weight:800;
+    background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.5); color:#f87171;
+  }
+  .auth-logout-btn:active{background:rgba(239,68,68,.22);}
+
   /* ---------- Tablet polish ---------- */
   @media(min-width:700px){
     .topbar{padding:16px 20px 10px;}
@@ -479,6 +526,8 @@ const DB_KEY_CLAIMED_EVENTS = 'fearnime_claimed_events';
 const DB_KEY_GENRES = 'fearnime_genres';
 const DB_KEY_RESOLUTIONS = 'fearnime_resolutions';
 const SEED_RESOLUTIONS = ['360p','480p','720p','1080p'];
+const DB_KEY_USER = 'fearnime_user';
+const GOOGLE_CLIENT_ID = '427132462258-6n8i6j3j0f97lts084fp5hvsrrpjj2vp.apps.googleusercontent.com';
 const MAX_TICKETS = 999;
 const SEED_GENRES = ['Action','Adventure','Comedy','Demons','Drama','Ecchi','Fantasy','Game','Harem','Historical'];
 const MAX_HISTORY_ITEMS = 200;
@@ -605,7 +654,13 @@ const DB = {
       const list = JSON.parse(localStorage.getItem(DB_KEY_RESOLUTIONS)) || [];
       return list.length ? list : [...SEED_RESOLUTIONS];
     }catch(e){ return [...SEED_RESOLUTIONS]; }
-  }
+  },
+  getUser(){
+    try{ return JSON.parse(localStorage.getItem(DB_KEY_USER)) || null; }
+    catch(e){ return null; }
+  },
+  saveUser(user){ return safeSetItem(DB_KEY_USER, JSON.stringify(user)); },
+  clearUser(){ localStorage.removeItem(DB_KEY_USER); }
 };
 
 /* ============================================================
@@ -686,6 +741,105 @@ function applySplashSettings(){
   if(el) el.src = logoUrl;
   const tagEl = document.getElementById('splashTagline');
   if(tagEl && s.splashTagline) tagEl.textContent = s.splashTagline;
+}
+
+/* ============================================================
+   Google Authentication (Google Identity Services) — baru
+============================================================ */
+function decodeJwtResponse(token){
+  try{
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g,'+').replace(/_/g,'/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c=>
+      '%' + ('00'+c.charCodeAt(0).toString(16)).slice(-2)
+    ).join(''));
+    return JSON.parse(jsonPayload);
+  }catch(e){ return null; }
+}
+function handleCredentialResponse(response){
+  const payload = decodeJwtResponse(response.credential);
+  if(!payload){ toast('Gagal login dengan Google'); return; }
+  const user = {
+    name: payload.name || '',
+    email: payload.email || '',
+    picture: payload.picture || '',
+    loggedInAt: Date.now()
+  };
+  DB.saveUser(user);
+  toast(`Halo, ${user.name.split(' ')[0] || 'pengguna'}!`);
+  renderAuthUI();
+}
+function initGoogleAuth(){
+  if(!window.google || !google.accounts || !google.accounts.id) return;
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredentialResponse,
+    auto_select: false
+  });
+  const btnWrap = document.getElementById('googleSignInBtnWrap');
+  if(btnWrap && !DB.getUser()){
+    btnWrap.innerHTML = '';
+    google.accounts.id.renderButton(btnWrap, { theme:'filled_black', size:'large', shape:'pill', text:'signin_with', width:260 });
+    google.accounts.id.prompt();
+  }
+}
+function logout(){
+  DB.clearUser();
+  if(window.google && google.accounts && google.accounts.id){
+    try{ google.accounts.id.disableAutoSelect(); }catch(e){}
+  }
+  toast('Berhasil logout');
+  renderAuthUI();
+}
+function renderAuthUI(){
+  const mount = document.getElementById('authBlock');
+  if(!mount) return;
+  const user = DB.getUser();
+  if(!user){
+    mount.innerHTML = `
+      <div class="auth-login-card">
+        <div class="auth-login-title">Masuk ke Fearnime</div>
+        <div class="auth-login-sub">Login dengan Google untuk personalisasi komentar &amp; menyimpan preferensi kamu.</div>
+        <div id="googleSignInBtnWrap"></div>
+      </div>
+    `;
+    initGoogleAuth();
+  } else {
+    mount.innerHTML = `
+      <div class="auth-profile-card">
+        <div class="auth-profile-head">
+          <div class="auth-profile-head-title">Akun Saya</div>
+          <div class="auth-profile-head-actions">
+            <button class="auth-chip-btn" id="viewProfileBtn">Lihat Profile</button>
+            <button class="auth-chip-btn accent" id="editProfileBtn">Edit</button>
+          </div>
+        </div>
+        <div class="auth-profile-body">
+          <img class="auth-avatar" src="${esc(user.picture)}" alt="${esc(user.name)}" onerror="this.style.opacity=0">
+          <div style="min-width:0;">
+            <div class="auth-profile-name">${esc(user.name)}</div>
+            <div class="auth-profile-email">${esc(user.email)}</div>
+          </div>
+        </div>
+        <div class="auth-perso-banner">
+          <div class="auth-perso-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div>
+          <div>
+            <div class="auth-perso-title">Personalisasi Komentar</div>
+            <div class="auth-perso-sub">Ganti badge, warna &amp; gaya balasan kamu di kolom komentar.</div>
+          </div>
+        </div>
+        <div class="auth-profile-foot">
+          <button class="auth-logout-btn" id="logoutBtn">Log Out</button>
+        </div>
+      </div>
+    `;
+    const viewBtn = document.getElementById('viewProfileBtn');
+    const editBtn = document.getElementById('editProfileBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    if(viewBtn) viewBtn.addEventListener('click', ()=> toast(`${user.name} · ${user.email}`));
+    if(editBtn) editBtn.addEventListener('click', ()=> toast('Fitur edit profil segera hadir'));
+    if(logoutBtn) logoutBtn.addEventListener('click', logout);
+  }
 }
 
 /* ============================================================
@@ -1539,6 +1693,7 @@ function renderSettings(){
   app.innerHTML = `
     <div class="page">
       <div class="topbar"><div class="topbar-row">${brandMarkHtml()}<div class="logo" style="margin-left:2px;">PENGATURAN</div></div></div>
+      <div class="auth-block" id="authBlock"></div>
       <div class="settings-block">
         <div class="setting-item">
           <div>
@@ -1570,6 +1725,7 @@ function renderSettings(){
       toast('Favorit berhasil dihapus');
     }
   });
+  renderAuthUI();
 }
 
 /* ============================================================
@@ -1587,6 +1743,14 @@ function hideSplash(){
   setTimeout(()=> sp.remove(), 550);
 }
 setTimeout(hideSplash, 900);
+
+/* Cek status login Google saat halaman dibuka */
+window.addEventListener('load', ()=>{
+  if(document.getElementById('authBlock')) renderAuthUI();
+  else if(window.google && google.accounts && google.accounts.id){
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse, auto_select: false });
+  }
+});
 </script>
 </body>
 </html>
