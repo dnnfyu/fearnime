@@ -7,6 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#050f0b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fearnime">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
   :root{
     --bg:#050f0b;
@@ -600,6 +606,37 @@
   }
   .edit-profile-save-btn:active{background:var(--card-hover);}
 
+  /* ---------- PWA Install Prompt ---------- */
+  .pwa-install-banner{
+    position:fixed; bottom:92px; left:50%; transform:translateX(-50%) translateY(20px);
+    z-index:90; max-width:var(--app-max); width:calc(100% - 28px);
+    background:linear-gradient(135deg, #0c211a, #14342a);
+    border:1px solid var(--accent); border-radius:14px;
+    padding:14px 16px; display:flex; align-items:center; gap:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+    opacity:0; transition:opacity .3s ease, transform .3s ease; pointer-events:none;
+  }
+  .pwa-install-banner.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto;}
+  .pwa-install-icon{
+    width:44px; height:44px; border-radius:12px; flex-shrink:0;
+    background:var(--accent-dim); display:flex; align-items:center; justify-content:center; color:var(--accent);
+  }
+  .pwa-install-icon svg{width:24px; height:24px;}
+  .pwa-install-text{flex:1; min-width:0;}
+  .pwa-install-title{font-size:13.5px; font-weight:800; color:var(--text);}
+  .pwa-install-sub{font-size:11.5px; color:var(--text-dim); margin-top:2px;}
+  .pwa-install-actions{display:flex; gap:8px; flex-shrink:0;}
+  .pwa-install-yes{
+    padding:9px 18px; border-radius:8px; background:var(--accent); color:#fff;
+    font-weight:800; font-size:12.5px; white-space:nowrap;
+  }
+  .pwa-install-yes:active{transform:scale(.96);}
+  .pwa-install-no{
+    padding:9px 14px; border-radius:8px; background:var(--bg-elevated); border:1px solid var(--border);
+    color:var(--text-dim); font-weight:700; font-size:12.5px; white-space:nowrap;
+  }
+  .pwa-install-no:active{background:var(--card-hover);}
+
   /* ---------- Tablet polish ---------- */
   @media(min-width:700px){
     .topbar{padding:16px 20px 10px;}
@@ -618,9 +655,7 @@
     .detail-title{font-size:22px;}
   }
 
-  /* ---------- Skala otomatis di layar lebih besar (tablet/desktop) ----------
-     --app-max naik bertahap sesuai lebar viewport supaya konten tidak
-     "terjebak" sempit di tengah layar besar, tapi tetap nyaman dibaca. */
+  /* ---------- Skala otomatis di layar lebih besar (tablet/desktop) ---------- */
   @media(min-width:900px){
     :root{ --app-max:980px; }
     .grid{grid-template-columns:repeat(6,1fr);}
@@ -633,8 +668,6 @@
     :root{ --app-max:1420px; }
     .grid{grid-template-columns:repeat(8,1fr);}
   }
-  /* Layar sangat lebar (desktop besar): batasi lebar kartu vertikal scroll
-     supaya poster tidak melar terlalu besar */
   @media(min-width:1200px){
     .continue-card{width:240px;}
   }
@@ -657,8 +690,6 @@
     width:100%; height:100%; object-fit:contain;
   }
   .player-frame-wrap:fullscreen .gesture-layer{ bottom:0; }
-  /* HP diputar ke landscape saat nonton: video otomatis mengisi tinggi layar
-     penuh (mirip aplikasi video native) tanpa harus tap tombol fullscreen dulu */
   @media(orientation:landscape) and (max-height:520px){
     .player-page .player-frame-wrap{
       aspect-ratio:auto; width:100%; height:100vh;
@@ -667,6 +698,9 @@
     .player-page .player-body{ padding:12px 16px; }
   }
 </style>
+  <meta property="og:image" content="https://bolt.new/static/og_default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://bolt.new/static/og_default.png">
 </head>
 <body>
 
@@ -683,6 +717,21 @@
   <div class="ad-gate-box">
     <button class="ad-gate-close" id="adGateCloseBtn">&times;</button>
     <div id="adGateContent"></div>
+  </div>
+</div>
+
+<!-- PWA Install Banner -->
+<div class="pwa-install-banner" id="pwaInstallBanner">
+  <div class="pwa-install-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
+  </div>
+  <div class="pwa-install-text">
+    <div class="pwa-install-title">Pasang Fearnime</div>
+    <div class="pwa-install-sub">Akses lebih cepat, jadi seperti aplikasi</div>
+  </div>
+  <div class="pwa-install-actions">
+    <button class="pwa-install-yes" id="pwaInstallYes">Pasang</button>
+    <button class="pwa-install-no" id="pwaInstallNo">Nanti</button>
   </div>
 </div>
 
@@ -742,10 +791,6 @@ function safeSetItem(key, value){
 
 const API_BASE = 'https://fearnime-api.prtamadnn.workers.dev';
 
-/* Cache lokal — diisi sekali dari API saat halaman dibuka (lihat loadRemoteData()
-   di bagian Init paling bawah), lalu dipakai oleh semua fungsi render yang
-   sifatnya sinkron seperti sebelumnya. History/Favorites/Tickets/User tetap
-   di localStorage karena itu memang data per-pengunjung, bukan data situs. */
 const CACHE = {
   animes: [],
   genres: [],
@@ -786,11 +831,6 @@ async function loadRemoteData(){
     console.warn('Gagal memuat data dari API, situs jalan dengan data kosong:', e);
   }
   CACHE.loaded = true;
-}
-
-function safeSetItem(key, value){
-  try{ localStorage.setItem(key, value); return true; }
-  catch(e){ console.warn('Penyimpanan lokal penuh, gagal menyimpan:', key); return false; }
 }
 
 const DB = {
@@ -1903,7 +1943,7 @@ function bindPlayerControls(ctx){
   });
 
   const cpRoot = document.getElementById('cpRoot');
-  if(!cpRoot) return; // iframe / Google Drive — tidak ada kontrol custom untuk ini
+  if(!cpRoot) return;
 
   const video = document.getElementById('mainVideo');
   const controls = document.getElementById('cpControls');
@@ -1927,7 +1967,6 @@ function bindPlayerControls(ctx){
   const prevBtnCp = document.getElementById('cpPrevBtn');
   const nextBtnCp = document.getElementById('cpNextBtn');
 
-  /* ---- lanjutkan posisi & status main setelah ganti kualitas ---- */
   if(playerResumeTime != null){
     const resumeT = playerResumeTime, resumeAuto = playerResumeAutoplay;
     playerResumeTime = null; playerResumeAutoplay = false;
@@ -1938,7 +1977,6 @@ function bindPlayerControls(ctx){
     });
   }
 
-  /* ---- play / pause ---- */
   function updatePlayIcon(){
     playBtn.innerHTML = video.paused ? ICONS.play : ICONS.pause;
     centerPlay.classList.toggle('show', video.paused);
@@ -1955,7 +1993,6 @@ function bindPlayerControls(ctx){
   video.addEventListener('canplay', ()=> spinner.classList.remove('show'));
   updatePlayIcon();
 
-  /* ---- waktu / seek bar ---- */
   video.addEventListener('loadedmetadata', ()=>{ timeDur.textContent = fmtTime(video.duration); });
   video.addEventListener('timeupdate', ()=>{
     if(!video.duration) return;
@@ -1996,7 +2033,6 @@ function bindPlayerControls(ctx){
   seekTrack.addEventListener('pointerup', ()=>{ seeking = false; scheduleHide(); });
   seekTrack.addEventListener('pointercancel', ()=>{ seeking = false; });
 
-  /* ---- volume ---- */
   video.volume = 1;
   volSlider.addEventListener('input', ()=>{
     video.volume = parseFloat(volSlider.value);
@@ -2009,11 +2045,9 @@ function bindPlayerControls(ctx){
     if(!video.muted && video.volume===0){ video.volume=1; volSlider.value=1; }
   });
 
-  /* ---- episode sebelumnya / berikutnya ---- */
   if(prevBtnCp && ctx.prevEp) prevBtnCp.addEventListener('click', ()=> tryWatchEpisode(ctx.anime.id, ctx.prevEp.number));
   if(nextBtnCp && ctx.nextEp) nextBtnCp.addEventListener('click', ()=> tryWatchEpisode(ctx.anime.id, ctx.nextEp.number));
 
-  /* ---- sheet: pilih episode ---- */
   if(epListBtn && epSheetOverlay){
     epListBtn.addEventListener('click', ()=>{ epSheetOverlay.classList.add('show'); showControls(true); });
     epSheetClose.addEventListener('click', ()=> epSheetOverlay.classList.remove('show'));
@@ -2023,7 +2057,6 @@ function bindPlayerControls(ctx){
     });
   }
 
-  /* ---- sheet: kualitas ---- */
   if(qualityBtn && qualitySheetOverlay){
     qualityBtn.addEventListener('click', ()=>{ qualitySheetOverlay.classList.add('show'); showControls(true); });
     qualitySheetClose.addEventListener('click', ()=> qualitySheetOverlay.classList.remove('show'));
@@ -2040,7 +2073,6 @@ function bindPlayerControls(ctx){
     });
   }
 
-  /* ---- kontrol otomatis hilang/muncul ---- */
   let hideTimer = null;
   function showControls(persist){
     controls.classList.add('show');
@@ -2059,7 +2091,6 @@ function bindPlayerControls(ctx){
   cpRoot.addEventListener('pointermove', ()=> showControls());
   scheduleHide();
 
-  /* ---- gesture: tap toggle kontrol, double-tap seek, tahan = speed 2x ---- */
   const gestureLayer = document.getElementById('gestureLayer');
   const flashLeft = document.getElementById('flashLeft');
   const flashRight = document.getElementById('flashRight');
@@ -2264,6 +2295,54 @@ function renderSettings(){
 }
 
 /* ============================================================
+   PWA — Service Worker Registration & Install Prompt
+============================================================ */
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredPrompt = e;
+  if(!localStorage.getItem('fearnime_pwa_dismissed')){
+    const banner = document.getElementById('pwaInstallBanner');
+    if(banner) banner.classList.add('show');
+  }
+});
+
+document.getElementById('pwaInstallYes').addEventListener('click', async ()=>{
+  const banner = document.getElementById('pwaInstallBanner');
+  if(banner) banner.classList.remove('show');
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if(outcome === 'accepted'){
+      toast('Fearnime berhasil dipasang!');
+    }
+    deferredPrompt = null;
+  }
+});
+
+document.getElementById('pwaInstallNo').addEventListener('click', ()=>{
+  const banner = document.getElementById('pwaInstallBanner');
+  if(banner) banner.classList.remove('show');
+  localStorage.setItem('fearnime_pwa_dismissed', '1');
+  deferredPrompt = null;
+});
+
+window.addEventListener('appinstalled', ()=>{
+  deferredPrompt = null;
+  const banner = document.getElementById('pwaInstallBanner');
+  if(banner) banner.classList.remove('show');
+});
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>{
+      console.warn('Service Worker gagal didaftarkan:', err);
+    });
+  });
+}
+
+/* ============================================================
    Init
 ============================================================ */
 document.getElementById('adGateCloseBtn').addEventListener('click', closeAdGate);
@@ -2284,7 +2363,6 @@ function hideSplash(){
   hideSplash();
 })();
 
-/* Cek status login Google saat halaman dibuka */
 window.addEventListener('load', ()=>{
   if(document.getElementById('authBlock')) renderAuthUI();
   else if(window.google && google.accounts && google.accounts.id){

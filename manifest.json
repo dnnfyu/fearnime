@@ -1,0 +1,27 @@
+{
+  "name": "Fearnime — Nonton Anime Sub Indo",
+  "short_name": "Fearnime",
+  "description": "Nonton anime sub Indo, kapan saja. Streaming serem, cepat, dan mudah.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050f0b",
+  "theme_color": "#050f0b",
+  "lang": "id",
+  "categories": ["entertainment", "video"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
