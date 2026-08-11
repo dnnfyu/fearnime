@@ -888,14 +888,27 @@ function timeAgo(ts){
 }
 function driveIdFromUrl(url){
   if(!url) return null;
-  const m1 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  let u;
+  try{ u = new URL(url); }catch(e){ return null; }
+  const host = u.hostname.toLowerCase();
+  const isDriveHost = host==='drive.google.com' || host.endsWith('.drive.google.com') ||
+                       host==='docs.google.com' || host.endsWith('.docs.google.com');
+  if(!isDriveHost) return null;
+  const m1 = u.pathname.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if(m1) return m1[1];
-  const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if(m2) return m2[1];
+  const idParam = u.searchParams.get('id');
+  if(idParam) return idParam;
   return null;
 }
 function isDirectVideo(url){
-  return /\.(mp4|webm|ogg|m3u8)(\?.*)?$/i.test(url||'');
+  if(!url) return false;
+  if(driveIdFromUrl(url)) return false;
+  if(/\.(mp4|webm|ogg|m3u8)(\?.*)?$/i.test(url)) return true;
+  try{
+    const host = new URL(url).hostname.toLowerCase();
+    if(host.endsWith('.workers.dev')) return true;
+  }catch(e){}
+  return false;
 }
 function shuffle(arr){
   const a = [...arr];
