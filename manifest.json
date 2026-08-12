@@ -9,7 +9,10 @@
   "background_color": "#050f0b",
   "theme_color": "#050f0b",
   "lang": "id",
-  "categories": ["entertainment", "video"],
+  "categories": [
+    "entertainment",
+    "video"
+  ],
   "icons": [
     {
       "src": "icons/icon-192.png",
