@@ -13,6 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Fearnime">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="20379886da0f0dc8f5dfff52612b9bd84a1c5789" content="20379886da0f0dc8f5dfff52612b9bd84a1c5789" />
+<link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet">
+<script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/videojs-contrib-ads@6.9.0/dist/videojs-contrib-ads.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/videojs-vast-vpaid@2.8.0/bin/videojs_vast_vpaid.min.js"></script>
 <style>
   :root{
     --bg:#0d0b1a;
@@ -80,8 +85,6 @@
   /* ---------- Top bar ---------- */
   .topbar{
     position:sticky; top:0; z-index:40;
-    background:linear-gradient(180deg, rgba(13,11,26,.98) 0%, rgba(13,11,26,.7) 65%, rgba(13,11,26,0) 100%);
-    backdrop-filter:blur(8px);
     padding:14px 14px 10px;
   }
   .topbar-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
@@ -467,6 +470,9 @@
   .ad-frame-wrap{width:100%; aspect-ratio:16/9; background:#000; border-radius:8px; overflow:hidden; margin-bottom:14px; display:flex; align-items:center; justify-content:center; color:var(--text-faint); font-size:11.5px; text-align:center; padding:14px;}
   .ad-frame-wrap iframe{width:100%; height:100%; border:0;}
   .ad-gate-actions{display:flex; gap:10px;}
+  .ad-video-wrap{width:100%; aspect-ratio:16/9; background:#000; border-radius:8px; overflow:hidden; margin-bottom:14px; position:relative;}
+  .ad-video-wrap .video-js{width:100%; height:100%;}
+  .ad-gate-status-badge{position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,.65); color:#fff; font-size:11px; padding:4px 9px; border-radius:999px; font-family:var(--font-mono); z-index:2; pointer-events:none;}
 
   /* ---------- Toast ---------- */
   .toast{position:fixed; bottom:88px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--card); border:1px solid var(--border); padding:11px 20px; border-radius:999px; font-size:12.5px; font-weight:600; z-index:200; opacity:0; transition:all .25s ease; pointer-events:none; white-space:nowrap;}
@@ -794,7 +800,7 @@ const CACHE = {
   genres: [],
   resolutions: [...SEED_RESOLUTIONS],
   settings: {logoUrl:'', splashLogoUrl:'', splashTagline:'STREAMING SEREM · SUB INDO'},
-  adSettings: {adGateEnabled:false, ticketsPerAd:3, ticketCostPerEpisode:1},
+  adSettings: {adGateEnabled:false, ticketsPerAd:8, ticketCostPerEpisode:1, vastTagUrl:'', videoPendekUrl:''},
   adSlots: [],
   announcement: {enabled:false, text:''},
   ticketEvent: null,
@@ -1202,20 +1208,23 @@ function genreChipsHtml(){
   `;
 }
 
+/* [PATCH ad-ticket-vast — bagian 1/2, lanjut besok: openAdGate/renderAdGateModal
+   masih pakai versi lama, belum diganti ke Video.js VAST/VPAID] */
 function tryWatchEpisode(animeId, epNumber){
   const settings = DB.getAdSettings();
-  if(!settings.adGateEnabled || settings.ticketCostPerEpisode<=0){
+  if(!settings.adGateEnabled){
     maybeShowInterstitial(animeId, epNumber);
     return;
   }
-  const cost = settings.ticketCostPerEpisode;
+  const cost = settings.ticketCostPerEpisode || 1;
   const balance = DB.getTickets();
-  if(balance >= cost){
-    DB.addTickets(-cost);
-    maybeShowInterstitial(animeId, epNumber);
-  } else {
+  if(balance < cost){
+    // Tiket tidak cukup (termasuk 0) -> wajib nonton iklan dulu
     openAdGate(animeId, epNumber, 'unlock');
+    return;
   }
+  DB.addTickets(-cost);
+  maybeShowInterstitial(animeId, epNumber);
 }
 function maybeShowInterstitial(animeId, epNumber){
   const slot = DB.getAdSlots().find(s=>s.enabled && s.type==='Interstitial');
@@ -1246,53 +1255,120 @@ function openInterstitial(slot, animeId, epNumber){
     navigate(`/play/${animeId}/${epNumber}`);
   });
 }
+/* ============================================================
+   [PATCH ad-ticket-vast — bagian 2/2] Ad Gate baru:
+   Video.js + videojs-vast-vpaid, dengan fallback "Video Pendek"
+   kalau VAST gagal/kosong. Selama mode 'unlock' (tiket habis),
+   gate wajib diselesaikan (tombol close disembunyikan).
+============================================================ */
 let adGateCtx = null;
+let adGatePlayer = null;
+let adGateFallbackTried = false;
+
 function openAdGate(animeId, epNumber, mode){
   adGateCtx = {animeId, epNumber, mode: mode||'unlock'};
+  adGateFallbackTried = false;
   renderAdGateModal();
-  document.getElementById('adGateOverlay').style.display = 'flex';
+  const overlay = document.getElementById('adGateOverlay');
+  overlay.style.display = 'flex';
+  overlay.dataset.forced = adGateCtx.mode==='unlock' ? '1' : '';
 }
-function closeAdGate(){
-  document.getElementById('adGateOverlay').style.display = 'none';
+function closeAdGate(force){
+  const overlay = document.getElementById('adGateOverlay');
+  if(overlay.dataset.forced==='1' && !force){
+    toast('Selesaikan iklan untuk mendapatkan tiket');
+    return;
+  }
+  overlay.style.display = 'none';
+  overlay.dataset.forced = '';
+  disposeAdGatePlayer();
   adGateCtx = null;
+}
+function disposeAdGatePlayer(){
+  if(adGatePlayer){
+    try{ adGatePlayer.dispose(); }catch(e){}
+    adGatePlayer = null;
+  }
 }
 function renderAdGateModal(){
   const settings = DB.getAdSettings();
-  const slot = DB.getAdSlots().find(s=>s.enabled && s.type==='Rewarded (Dapat Tiket)');
-  const cost = settings.ticketCostPerEpisode;
+  const cost = settings.ticketCostPerEpisode || 1;
+  const reward = settings.ticketsPerAd || 8;
   const balance = DB.getTickets();
   const content = document.getElementById('adGateContent');
   const introText = adGateCtx.mode==='unlock'
-    ? `Tiket kamu tidak cukup untuk nonton episode ini (butuh ${cost}, kamu punya ${balance}). Tonton iklan untuk dapat ${settings.ticketsPerAd} tiket.`
-    : `Tonton iklan untuk mendapatkan ${settings.ticketsPerAd} tiket tambahan (maks ${MAX_TICKETS}).`;
+    ? `Tiket kamu tidak cukup untuk nonton episode ini (butuh ${cost}, kamu punya ${balance}). Selesaikan iklan berikut untuk dapat ${reward} tiket.`
+    : `Tonton iklan untuk mendapatkan ${reward} tiket tambahan (maks ${MAX_TICKETS}).`;
   content.innerHTML = `
-    <div class="ad-gate-title">⚡ Tonton Iklan, Dapat Tiket</div>
+    <div class="ad-gate-title">⚡ Tonton Iklan, Dapat ${reward} Tiket</div>
     <div class="ad-gate-sub">${esc(introText)}</div>
-    <div class="ad-frame-wrap">${slot && slot.code ? `<iframe srcdoc="${escAttr(slot.code)}"></iframe>` : `<span>Preview iklan — tempel kode iklan tipe "Rewarded" di Admin Panel &gt; Iklan &amp; Tiket</span>`}</div>
-    <div class="ad-gate-actions">
-      <button class="btn btn-ghost" id="adGateCancelBtn" style="flex:1;">Batal</button>
-      <button class="btn btn-primary" id="adGateClaimBtn" style="flex:1;" disabled>Tunggu 5s...</button>
+    <div class="ad-video-wrap">
+      <video id="adGateVideo" class="video-js vjs-default-skin" playsinline></video>
+      <div class="ad-gate-status-badge" id="adGateStatusBadge">Memuat iklan...</div>
+    </div>
+    <div class="ad-gate-actions" id="adGateActionsRow">
+      ${adGateCtx.mode==='unlock' ? '' : `<button class="btn btn-ghost" id="adGateCancelBtn" style="flex:1;">Batal</button>`}
     </div>
   `;
-  document.getElementById('adGateCancelBtn').addEventListener('click', closeAdGate);
-  let t = 5;
-  const claimBtn = document.getElementById('adGateClaimBtn');
-  const timer = setInterval(()=>{
-    t--;
-    if(t<=0){ clearInterval(timer); claimBtn.disabled=false; claimBtn.textContent = `+${settings.ticketsPerAd} Klaim Tiket`; }
-    else claimBtn.textContent = `Tunggu ${t}s...`;
-  },1000);
-  claimBtn.addEventListener('click', ()=>{
-    DB.addTickets(settings.ticketsPerAd);
-    toast(`+${settings.ticketsPerAd} tiket didapat!`);
-    const ctx = adGateCtx;
-    closeAdGate();
-    if(ctx.mode==='unlock'){
-      tryWatchEpisode(ctx.animeId, ctx.epNumber);
-    } else {
-      route();
-    }
+  const closeBtn = document.getElementById('adGateCloseBtn');
+  if(closeBtn) closeBtn.style.display = adGateCtx.mode==='unlock' ? 'none' : 'flex';
+  const cancelBtn = document.getElementById('adGateCancelBtn');
+  if(cancelBtn) cancelBtn.addEventListener('click', ()=> closeAdGate());
+  startAdGateVideo();
+}
+function startAdGateVideo(){
+  const settings = DB.getAdSettings();
+  const vastUrl = (settings.vastTagUrl||'').trim();
+  const fallbackUrl = (settings.videoPendekUrl||'').trim();
+  const statusBadge = document.getElementById('adGateStatusBadge');
+
+  disposeAdGatePlayer();
+  adGatePlayer = videojs('adGateVideo', {
+    controls:false, autoplay:true, muted:false, preload:'auto', fluid:false, inactivityTimeout:0
   });
+
+  function goFallback(){
+    if(adGateFallbackTried) return;
+    adGateFallbackTried = true;
+    if(!fallbackUrl){
+      if(statusBadge) statusBadge.textContent = 'Iklan tidak tersedia';
+      grantTicketsAndContinue();
+      return;
+    }
+    if(statusBadge) statusBadge.textContent = 'Memuat iklan cadangan...';
+    adGatePlayer.src({src:fallbackUrl, type:'video/mp4'});
+    adGatePlayer.play().catch(()=>{});
+    adGatePlayer.one('ended', grantTicketsAndContinue);
+    adGatePlayer.one('error', grantTicketsAndContinue);
+  }
+
+  if(vastUrl){
+    adGatePlayer.ready(function(){
+      try{
+        this.vastClient({ adTagUrl:vastUrl, playAdAlways:true, adCancelTimeout:8000, verbosity:0 });
+      }catch(e){ goFallback(); }
+    });
+    adGatePlayer.on('vast.adStart', ()=>{ if(statusBadge) statusBadge.textContent = 'Iklan'; });
+    adGatePlayer.on('vast.adEnd', grantTicketsAndContinue);
+    adGatePlayer.on('vast.adError', goFallback);
+    adGatePlayer.on('vast.adsCancel', goFallback);
+  } else {
+    goFallback();
+  }
+}
+function grantTicketsAndContinue(){
+  const settings = DB.getAdSettings();
+  const reward = settings.ticketsPerAd || 8;
+  DB.addTickets(reward);
+  toast(`+${reward} tiket didapat!`);
+  const ctx = adGateCtx;
+  disposeAdGatePlayer();
+  closeAdGate(true);
+  if(ctx && ctx.mode==='unlock'){
+    tryWatchEpisode(ctx.animeId, ctx.epNumber);
+  } else {
+    route();
+  }
 }
 function checkTicketEvent(){
   const ev = DB.getTicketEvent();
@@ -1548,7 +1624,7 @@ function renderHome(){
 
       <div class="section">
         <div class="section-head">
-          <div><div class="section-title"><span class="dot"></span>${ICONS.fire} Trending Hari Ini</div></div>
+          <div><div class="section-title"><span class="dot"></span>Trending Hari Ini</div></div>
           <div class="section-actions">
             <a class="see-all" href="#/browse/trending">Lihat Semua</a>
           </div>
@@ -1873,7 +1949,7 @@ function renderPlayer(animeId, epNumber){
   `;
 
   const backBtn = document.getElementById('backBtn');
-  if(backBtn) backBtn.addEventListener('click', ()=> safeExitFullscreen(()=> navigate(`/detail/${a.id}`)));
+  if(backBtn) backBtn.addEventListener('click', ()=> safeExitFullscreen(()=> window.history.back()));
   document.querySelectorAll('.q-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       currentQuality = btn.dataset.q;
@@ -2498,7 +2574,7 @@ if('serviceWorker' in navigator){
 /* ============================================================
    Init
 ============================================================ */
-document.getElementById('adGateCloseBtn').addEventListener('click', closeAdGate);
+document.getElementById('adGateCloseBtn').addEventListener('click', ()=> closeAdGate());
 
 function hideSplash(){
   const sp = document.getElementById('splashScreen');
@@ -2508,6 +2584,7 @@ function hideSplash(){
 }
 
 (async function initApp(){
+  applySplashSettings();
   const minSplash = new Promise(r=> setTimeout(r, 1800));
   await Promise.all([loadRemoteData(), minSplash]);
   applySplashSettings();
