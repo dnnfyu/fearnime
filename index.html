@@ -333,10 +333,10 @@
   .cp-controls.show .cp-top-bar, .cp-controls.show .cp-bottom-bar{pointer-events:auto;}
 
   .cp-top-bar{
-    display:flex; align-items:center; gap:10px; padding:12px;
-    background:linear-gradient(180deg, rgba(0,0,0,.75), transparent);
+    display:flex; align-items:center; gap:10px; padding:12px 14px;
+    background:linear-gradient(180deg, rgba(0,0,0,.7), transparent);
   }
-  .cp-title{flex:1; min-width:0; font-size:12.5px; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .cp-title{flex:1; min-width:0; text-align:center; font-size:12.5px; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .cp-top-actions{display:flex; align-items:center; gap:8px; flex-shrink:0;}
   .cp-icon-btn{
     width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
@@ -345,16 +345,19 @@
   .cp-icon-btn svg{width:17px; height:17px; display:block;}
   .cp-icon-btn:active{background:rgba(255,255,255,.18);}
   .cp-icon-btn.disabled{opacity:.35; pointer-events:none;}
-  .cp-quality-chip{
-    padding:6px 11px; border-radius:999px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.14);
-    color:#fff; font-size:11px; font-weight:800; font-family:var(--font-mono); flex-shrink:0;
+  .cp-quality-indicator{
+    position:absolute; top:14px; right:14px; z-index:6;
+    background:rgba(0,0,0,.55); color:#fff; font-size:11px; font-weight:800;
+    padding:4px 10px; border-radius:6px; font-family:var(--font-mono);
+    opacity:0; transition:opacity .4s ease; pointer-events:none;
   }
+  .cp-quality-indicator.show{opacity:1;}
 
   .cp-bottom-bar{
-    padding:8px 12px 12px;
+    padding:8px 12px 14px;
     background:linear-gradient(0deg, rgba(0,0,0,.82), transparent);
   }
-  .cp-seek-row{display:flex; align-items:center; gap:9px; margin-bottom:6px;}
+  .cp-seek-row{display:flex; align-items:center; gap:9px; margin-bottom:10px;}
   .cp-time{font-family:var(--font-mono); font-size:11px; color:#fff; flex-shrink:0; min-width:34px;}
   .cp-time:last-child{text-align:right;}
   .cp-seek-track{
@@ -370,12 +373,24 @@
     position:absolute; top:50%; left:0%; width:12px; height:12px; border-radius:50%; background:var(--accent);
     transform:translate(-50%,-50%); box-shadow:0 0 0 4px rgba(236,72,153,.22);
   }
-  .cp-actions-row{display:flex; align-items:center; gap:8px;}
-  .cp-vol-slider{
-    -webkit-appearance:none; appearance:none; width:64px; height:3px; border-radius:2px; background:rgba(255,255,255,.3); outline:none;
+  .cp-actions-row{display:flex; align-items:center; justify-content:center; gap:24px;}
+  .cp-mini-btn{
+    width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:transparent; border:none; color:#fff; flex-shrink:0;
   }
-  .cp-vol-slider::-webkit-slider-thumb{-webkit-appearance:none; width:11px; height:11px; border-radius:50%; background:var(--accent); cursor:pointer;}
-  .cp-vol-slider::-moz-range-thumb{width:11px; height:11px; border-radius:50%; background:var(--accent); border:none; cursor:pointer;}
+  .cp-mini-btn svg{width:19px; height:19px; display:block;}
+  .cp-mini-btn:active{opacity:.55;}
+  .cp-play-round{
+    width:48px; height:48px; border-radius:50%; background:#fff; color:#111;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; border:none;
+  }
+  .cp-play-round svg{width:22px; height:22px; display:block;}
+  .cp-play-round:active{transform:scale(.94);}
+  .cp-quality-pill{
+    padding:6px 14px; border-radius:999px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.22);
+    color:#fff; font-size:11.5px; font-weight:800; font-family:var(--font-mono); flex-shrink:0;
+  }
+  .cp-quality-pill:active{background:rgba(255,255,255,.26);}
 
   .cp-sheet-overlay{
     position:absolute; inset:0; z-index:20; background:rgba(2,8,6,.72); backdrop-filter:blur(3px);
@@ -1980,6 +1995,7 @@ function videoPlayerHtml(url, ctx){
 
         <div class="cp-center-play" id="cpCenterPlay">${ICONS.playBig}</div>
         <div class="cp-spinner" id="cpSpinner"></div>
+        <div class="cp-quality-indicator" id="cpQualityIndicator">${esc(currentQuality||'')}</div>
 
         <div class="cp-gesture-layer" id="gestureLayer">
           <div class="cp-gesture-zone cp-gesture-left" data-side="left"></div>
@@ -1994,9 +2010,7 @@ function videoPlayerHtml(url, ctx){
             <button class="cp-icon-btn" id="backBtn">${ICONS.back}</button>
             <div class="cp-title">Ep ${ep.number} · ${esc(anime.title)}</div>
             <div class="cp-top-actions">
-              ${availableQ.length ? `<button class="cp-quality-chip" id="cpQualityBtn">${esc(currentQuality||'Auto')}</button>` : ''}
               <button class="cp-icon-btn" id="cpEpListBtn">${ICONS.list}</button>
-              <button class="cp-icon-btn" id="cpSpeedBtn">${ICONS.gauge}</button>
               <button class="cp-icon-btn" id="fullscreenBtn">${ICONS.fullscreen}</button>
             </div>
           </div>
@@ -2012,13 +2026,12 @@ function videoPlayerHtml(url, ctx){
               <span class="cp-time" id="cpTimeDur">0:00</span>
             </div>
             <div class="cp-actions-row">
-              <button class="cp-icon-btn" id="cpPlayBtn">${ICONS.pause}</button>
-              <button class="cp-icon-btn ${!hasPrev?'disabled':''}" id="cpPrevBtn">${ICONS.skipPrev}</button>
-              <button class="cp-icon-btn ${!hasNext?'disabled':''}" id="cpNextBtn">${ICONS.skipNext}</button>
-              <button class="cp-icon-btn" id="cpMuteBtn">${ICONS.volume}</button>
-              <input type="range" class="cp-vol-slider" id="cpVolSlider" min="0" max="1" step="0.05" value="1">
-              <div style="flex:1"></div>
-              <button class="cp-icon-btn" id="cpFsBtn2">${ICONS.fullscreen}</button>
+              <button class="cp-mini-btn" id="cpMuteBtn">${ICONS.volume}</button>
+              <button class="cp-mini-btn" id="cpRewindBtn">${ICONS.seekBack}</button>
+              <button class="cp-play-round" id="cpPlayBtn">${ICONS.pause}</button>
+              <button class="cp-mini-btn" id="cpForwardBtn">${ICONS.seekFwd}</button>
+              ${availableQ.length ? `<button class="cp-quality-pill" id="cpQualityBtn">${esc(qualityGroupLabel(currentQuality))}</button>` : ''}
+              <button class="cp-mini-btn" id="cpSpeedBtn">${ICONS.gauge}</button>
             </div>
           </div>
         </div>
@@ -2051,7 +2064,7 @@ function videoPlayerHtml(url, ctx){
             <div class="cp-sheet-list">
               ${availableQ.map(q=>`
                 <button class="cp-sheet-item ${q===currentQuality?'active':''}" data-setq="${esc(q)}">
-                  <span class="cp-sheet-label">${esc(q)}</span>
+                  <span class="cp-sheet-label">${esc(q)} <span style="color:var(--text-faint); font-weight:400;">(${qualityGroupLabel(q)})</span></span>
                   ${q===currentQuality?ICONS.check:''}
                 </button>
               `).join('')}
@@ -2091,6 +2104,15 @@ function fmtTime(s){
   const mm = h ? String(m).padStart(2,'0') : m;
   return (h ? h+':' : '') + mm + ':' + String(sec).padStart(2,'0');
 }
+// SD = di bawah 720 (mis. 360p, 480p), HD = 720 ke atas (mis. 720p, 1080p, 4K).
+// Otomatis mengikuti resolusi apa pun yang ditambahkan admin di tab "Resolusi",
+// tanpa perlu pengaturan tambahan.
+function qualityGroupLabel(q){
+  if(!q) return 'SD';
+  const n = parseInt(String(q).replace(/[^0-9]/g,''), 10);
+  if(!isNaN(n) && n >= 720) return 'HD';
+  return 'SD';
+}
 
 function bindPlayerControls(ctx){
   const frameWrap = document.getElementById('frameWrap');
@@ -2126,9 +2148,11 @@ function bindPlayerControls(ctx){
   const controls = document.getElementById('cpControls');
   const centerPlay = document.getElementById('cpCenterPlay');
   const spinner = document.getElementById('cpSpinner');
+  const qualityIndicator = document.getElementById('cpQualityIndicator');
   const playBtn = document.getElementById('cpPlayBtn');
   const muteBtn = document.getElementById('cpMuteBtn');
-  const volSlider = document.getElementById('cpVolSlider');
+  const rewindBtn = document.getElementById('cpRewindBtn');
+  const forwardBtn = document.getElementById('cpForwardBtn');
   const seekTrack = document.getElementById('cpSeekTrack');
   const seekPlayed = document.getElementById('cpSeekPlayed');
   const seekBuffered = document.getElementById('cpSeekBuffered');
@@ -2144,8 +2168,11 @@ function bindPlayerControls(ctx){
   const speedBtn = document.getElementById('cpSpeedBtn');
   const speedSheetOverlay = document.getElementById('cpSpeedSheetOverlay');
   const speedSheetClose = document.getElementById('cpSpeedSheetClose');
-  const prevBtnCp = document.getElementById('cpPrevBtn');
-  const nextBtnCp = document.getElementById('cpNextBtn');
+
+  if(qualityIndicator){
+    qualityIndicator.classList.add('show');
+    setTimeout(()=> qualityIndicator.classList.remove('show'), 2200);
+  }
 
   if(playerResumeTime != null){
     const resumeT = playerResumeTime, resumeAuto = playerResumeAutoplay;
@@ -2222,19 +2249,12 @@ function bindPlayerControls(ctx){
   seekTrack.addEventListener('pointercancel', ()=>{ seeking = false; });
 
   video.volume = 1;
-  volSlider.addEventListener('input', ()=>{
-    video.volume = parseFloat(volSlider.value);
-    video.muted = video.volume===0;
-    muteBtn.innerHTML = video.muted ? ICONS.volumeMute : ICONS.volume;
-  });
   muteBtn.addEventListener('click', ()=>{
     video.muted = !video.muted;
     muteBtn.innerHTML = video.muted ? ICONS.volumeMute : ICONS.volume;
-    if(!video.muted && video.volume===0){ video.volume=1; volSlider.value=1; }
   });
-
-  if(prevBtnCp && ctx.prevEp) prevBtnCp.addEventListener('click', ()=> tryWatchEpisode(ctx.anime.id, ctx.prevEp.number));
-  if(nextBtnCp && ctx.nextEp) nextBtnCp.addEventListener('click', ()=> tryWatchEpisode(ctx.anime.id, ctx.nextEp.number));
+  if(rewindBtn) rewindBtn.addEventListener('click', ()=>{ seekBy(-10); showControls(); });
+  if(forwardBtn) forwardBtn.addEventListener('click', ()=>{ seekBy(10); showControls(); });
 
   if(epListBtn && epSheetOverlay){
     epListBtn.addEventListener('click', ()=>{ epSheetOverlay.classList.add('show'); showControls(true); });
