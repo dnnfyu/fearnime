@@ -508,7 +508,8 @@ function convertDriveUrlToProxy(url){
   if(!driveId) return { url, wasDrive:false };
   const base = (DB.getSettings().driveProxyBaseUrl || '').trim().replace(/\/+$/,'');
   if(!base) return { url:null, wasDrive:true };
-  return { url: base + '/drive/' + driveId, wasDrive:true };
+  const sep = base.includes('?') ? '&' : '?';
+  return { url: base + sep + 'id=' + driveId, wasDrive:true };
 }
 function toast(msg){
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
@@ -1251,8 +1252,8 @@ function renderSettingsPanel(){
       </p>
       <div class="field">
         <label>URL Worker Proxy Video Drive</label>
-        <input id="set_drive_proxy" value="${esc(s.driveProxyBaseUrl||'')}" placeholder="https://fearnime-drive-proxy.akun-kamu.workers.dev">
-        <div class="hint">Isi alamat dasar Worker-nya saja (tanpa "/drive/..." di belakang). Kosongkan kalau belum deploy Worker proxy-nya.</div>
+        <input id="set_drive_proxy" value="${esc(s.driveProxyBaseUrl||'')}" placeholder="https://fearnime-drive-proxy.prtamadnn.workers.dev">
+        <div class="hint">Isi alamat dasar Worker-nya saja (tanpa "?id=..." di belakang) — nanti "?id=&lt;ID file&gt;" ditambahkan otomatis di setiap link. Kosongkan kalau belum mau pakai proxy.</div>
       </div>
       <div class="form-actions">
         <button class="btn btn-primary" id="saveDriveProxyBtn">Simpan Proxy Drive</button>
