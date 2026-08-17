@@ -374,7 +374,7 @@ function adminLogout(){
 /* ---------- Cache lokal, diisi dari API setelah login ---------- */
 const CACHE = {
   animes: [], genres: [...SEED_GENRES], resolutions: [...SEED_RESOLUTIONS],
-  settings: {logoUrl:'', splashLogoUrl:'', splashTagline:'STREAMING SEREM · SUB INDO'},
+  settings: {logoUrl:'', splashLogoUrl:'', splashTagline:'STREAMING SEREM · SUB INDO', driveProxyBaseUrl:''},
   adSettings: {adGateEnabled:false, ticketsPerAd:8, ticketCostPerEpisode:1, vastTagUrl:'', videoPendekUrl:''},
   adSlots: [], announcement: {enabled:false, text:''}, ticketEvent: null
 };
@@ -484,6 +484,32 @@ function getResoList(){ return DB.getResolutions(); }
 
 function uid(){ return 'a_'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function esc(str){ const d=document.createElement('div'); d.textContent = str==null?'':String(str); return d.innerHTML; }
+
+/* ---------- Auto-convert link Google Drive -> link proxy video langsung ---------- */
+function adminDriveIdFromUrl(url){
+  if(!url) return null;
+  let u;
+  try{ u = new URL(url); }catch(e){ return null; }
+  const host = u.hostname.toLowerCase();
+  const isDriveHost = host==='drive.google.com' || host.endsWith('.drive.google.com') ||
+                       host==='docs.google.com' || host.endsWith('.docs.google.com');
+  if(!isDriveHost) return null;
+  const m1 = u.pathname.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if(m1) return m1[1];
+  const idParam = u.searchParams.get('id');
+  if(idParam) return idParam;
+  return null;
+}
+// Kalau url adalah link Drive & proxy sudah dikonfigurasi di Pengaturan, kembalikan
+// link proxy-nya. Kalau bukan link Drive, kembalikan apa adanya. Kalau link Drive
+// tapi proxy belum dikonfigurasi, kembalikan null supaya pemanggil bisa menahan simpan.
+function convertDriveUrlToProxy(url){
+  const driveId = adminDriveIdFromUrl(url);
+  if(!driveId) return { url, wasDrive:false };
+  const base = (DB.getSettings().driveProxyBaseUrl || '').trim().replace(/\/+$/,'');
+  if(!base) return { url:null, wasDrive:true };
+  return { url: base + '/drive/' + driveId, wasDrive:true };
+}
 function toast(msg){
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(window.__t); window.__t=setTimeout(()=>t.classList.remove('show'),1800);
@@ -794,12 +820,22 @@ function bindEpisodePanel(animeId){
       if(!num || num<1){ toast('Nomor episode tidak valid'); return; }
       const videoUrls = {};
       let hasAny = false;
+      let convertedCount = 0;
+      let blockedDriveLink = false;
       getResoList().forEach(q=>{
         if(epFormChecked[q] && (epFormUrls[q]||'').trim()){
-          videoUrls[q] = epFormUrls[q].trim();
+          const raw = epFormUrls[q].trim();
+          const { url: converted, wasDrive } = convertDriveUrlToProxy(raw);
+          if(wasDrive && converted===null){ blockedDriveLink = true; return; }
+          if(wasDrive){ convertedCount++; }
+          videoUrls[q] = converted;
           hasAny = true;
         }
       });
+      if(blockedDriveLink){
+        toast('Isi dulu "URL Proxy Video Drive" di tab Pengaturan, baru link Drive bisa otomatis dikonversi');
+        return;
+      }
       if(!hasAny){ toast('Isi minimal 1 URL video untuk resolusi yang dicentang'); return; }
       const anime = DB.getAnime(animeId);
       if(epEditingNum==null && anime.episodes.some(e=>e.number===num)){
@@ -808,7 +844,8 @@ function bindEpisodePanel(animeId){
       addBtn.disabled = true;
       try{
         await DB.upsertEpisode(animeId, num, videoUrls);
-        toast(epEditingNum!=null ? 'Episode diperbarui' : 'Episode ditambahkan');
+        const base = epEditingNum!=null ? 'Episode diperbarui' : 'Episode ditambahkan';
+        toast(convertedCount ? `${base} · ${convertedCount} link Drive dikonversi ke proxy` : base);
         resetEpForm();
         renderForm(animeId);
       }catch(e){
@@ -1206,6 +1243,23 @@ function renderSettingsPanel(){
     </div>
 
     <div class="panel">
+      <h3><span class="dot"></span>Proxy Video Google Drive</h3>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:14px;">
+        Kalau diisi, setiap kamu paste link Google Drive mentah di field URL video episode, sistem otomatis
+        mengonversinya jadi link proxy ini sebelum disimpan — supaya video pakai player custom (bukan tampilan
+        bawaan Google Drive) dan tidak kena halaman "tidak bisa dipindai virus".
+      </p>
+      <div class="field">
+        <label>URL Worker Proxy Video Drive</label>
+        <input id="set_drive_proxy" value="${esc(s.driveProxyBaseUrl||'')}" placeholder="https://fearnime-drive-proxy.akun-kamu.workers.dev">
+        <div class="hint">Isi alamat dasar Worker-nya saja (tanpa "/drive/..." di belakang). Kosongkan kalau belum deploy Worker proxy-nya.</div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveDriveProxyBtn">Simpan Proxy Drive</button>
+      </div>
+    </div>
+
+    <div class="panel">
       <h3><span class="dot"></span>Clear Cache</h3>
       <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:14px;">
         Menghapus riwayat tontonan &amp; favorit yang tersimpan di localStorage browser ini.
@@ -1229,13 +1283,28 @@ function renderSettingsPanel(){
     const btn = document.getElementById('saveSiteSettingsBtn');
     btn.disabled = true;
     try{
-      await DB.saveSettings({
+      await DB.saveSettings(Object.assign({}, DB.getSettings(), {
         logoUrl: document.getElementById('set_logo').value.trim(),
         splashLogoUrl: document.getElementById('set_splash_logo').value.trim(),
         splashTagline: document.getElementById('set_splash_tagline').value.trim() || 'STREAMING SEREM · SUB INDO'
-      });
+      }));
       toast('Tampilan disimpan');
       renderAdminBrandMark();
+    }catch(e){
+      console.warn(e);
+      toast('Gagal menyimpan ke server');
+    }finally{
+      btn.disabled = false;
+    }
+  });
+  document.getElementById('saveDriveProxyBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('saveDriveProxyBtn');
+    btn.disabled = true;
+    try{
+      await DB.saveSettings(Object.assign({}, DB.getSettings(), {
+        driveProxyBaseUrl: document.getElementById('set_drive_proxy').value.trim()
+      }));
+      toast('URL proxy Drive disimpan');
     }catch(e){
       console.warn(e);
       toast('Gagal menyimpan ke server');
