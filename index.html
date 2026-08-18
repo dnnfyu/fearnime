@@ -2188,9 +2188,11 @@ function bindPlayerControls(ctx){
 
   video.addEventListener('loadedmetadata', ()=>{
     timeDur.textContent = fmtTime(video.duration);
-    if(video.videoWidth && video.videoHeight){
-      frameWrap.style.aspectRatio = video.videoWidth + ' / ' + video.videoHeight;
-    }
+    // Sengaja TIDAK mengubah aspect-ratio frameWrap mengikuti resolusi asli file
+    // video (yang bisa aneh/tidak standar dan bikin kotak video jadi kegedean atau
+    // nggak center, terutama di layar kecil). Kotak video dikunci 16:9 lewat CSS
+    // (.player-frame-wrap), dan .cp-root video sudah object-fit:contain, jadi video
+    // apa pun rasionya otomatis di-letterbox & di-tengah-tengahkan di dalam kotak itu.
   });
 
   function updatePlayIcon(){
@@ -2207,6 +2209,19 @@ function bindPlayerControls(ctx){
   video.addEventListener('waiting', ()=> spinner.classList.add('show'));
   video.addEventListener('playing', ()=> spinner.classList.remove('show'));
   video.addEventListener('canplay', ()=> spinner.classList.remove('show'));
+  video.addEventListener('error', ()=>{
+    spinner.classList.remove('show');
+    const err = video.error;
+    const codeMsg = {
+      1: 'Pemutaran dibatalkan',
+      2: 'Gagal memuat video (jaringan/CORS/link mati)',
+      3: 'Format video rusak atau tidak didukung browser',
+      4: 'Sumber video tidak didukung atau URL tidak valid'
+    };
+    const msg = (err && codeMsg[err.code]) || 'Video gagal dimuat';
+    console.warn('Video error:', err && err.code, err && err.message, '| src:', video.currentSrc);
+    toast(msg + ' — cek link video episode ini di admin panel');
+  });
   updatePlayIcon();
 
   video.addEventListener('timeupdate', ()=>{
