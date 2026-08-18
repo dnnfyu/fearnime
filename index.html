@@ -395,6 +395,24 @@
   }
   .cp-quality-pill:active{background:rgba(255,255,255,.26);}
 
+  /* Player di HP dibikin lebih ringkas: tombol & ikon dikecilin biar proporsional
+     sama kotak video yang sekarang lebih pendek (lihat .player-frame-wrap di atas). */
+  @media(max-width:699px){
+    .cp-top-bar{padding:8px 10px;}
+    .cp-icon-btn{width:28px; height:28px;}
+    .cp-icon-btn svg{width:14px; height:14px;}
+    .cp-bottom-bar{padding:5px 10px 8px;}
+    .cp-seek-row{margin-bottom:5px; gap:7px;}
+    .cp-time{font-size:10px; min-width:28px;}
+    .cp-actions-row{gap:14px;}
+    .cp-mini-btn{width:24px; height:24px;}
+    .cp-mini-btn svg{width:15px; height:15px;}
+    .cp-play-round{width:36px; height:36px;}
+    .cp-play-round svg{width:17px; height:17px;}
+    .cp-quality-pill{padding:4px 10px; font-size:10.5px;}
+    .cp-center-play{width:48px; height:48px;}
+  }
+
   .cp-sheet-overlay{
     position:absolute; inset:0; z-index:20; background:rgba(2,8,6,.72); backdrop-filter:blur(3px);
     display:flex; align-items:flex-end; opacity:0; pointer-events:none; transition:opacity .2s ease;
@@ -2132,14 +2150,10 @@ function bindPlayerControls(ctx){
   if(fsBtn2) fsBtn2.addEventListener('click', toggleFullscreen);
 
   document.addEventListener('fullscreenchange', function onFsChange(){
-    if(document.fullscreenElement){
-      if(screen.orientation && screen.orientation.lock){
-        screen.orientation.lock('landscape').catch(()=>{});
-      }
-    } else {
-      if(screen.orientation && screen.orientation.unlock){
-        try{ screen.orientation.unlock(); }catch(e){}
-      }
+    // Sengaja TIDAK memanggil screen.orientation.lock('landscape') lagi — itu
+    // bikin layar terkunci landscape dan nggak ikut muter pas HP diputar balik
+    // ke portrait. Sekarang rotasi mengikuti device secara natural saat fullscreen.
+    if(!document.fullscreenElement){
       document.removeEventListener('fullscreenchange', onFsChange);
     }
   });
