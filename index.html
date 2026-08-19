@@ -154,7 +154,7 @@
   .badge-status.END{background:var(--ended); color:#fff;}
   .badge-rating{top:6px; right:6px; background:var(--accent); color:#fff; display:flex; align-items:center; gap:2px;}
   .ep-badge{bottom:6px; right:6px; background:rgba(0,0,0,.72); color:#fff; padding:2px 6px;}
-  .card-title{font-size:12.5px; font-weight:700; margin-top:7px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .card-title{font-size:12.5px; font-weight:700; margin-top:7px; line-height:1.3;}
   .card-type{font-size:10.5px; color:var(--text-faint); margin-top:2px; font-family:var(--font-mono); text-transform:uppercase;}
 
   /* ---------- Continue watching ---------- */
@@ -166,7 +166,7 @@
   .continue-progress{position:absolute; bottom:0; left:0; right:0; height:3px; background:rgba(255,255,255,.2);}
   .continue-progress i{display:block; height:100%; background:var(--accent);}
   .continue-body{padding:9px 10px 11px;}
-  .continue-title{font-size:12.5px; font-weight:700; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden;}
+  .continue-title{font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .continue-ep{font-size:11px; color:var(--text-dim); margin-top:3px; font-family:var(--font-mono);}
 
   /* ---------- Empty state ---------- */
@@ -453,7 +453,7 @@
   .list-row-poster{width:56px; aspect-ratio:2/3; border-radius:8px; overflow:hidden; flex-shrink:0; background:var(--card);}
   .list-row-poster img{width:100%; height:100%; object-fit:cover;}
   .list-row-body{flex:1; min-width:0;}
-  .list-row-title{font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .list-row-title{font-size:13.5px; font-weight:700; line-height:1.35;}
   .list-row-sub{font-size:11.5px; color:var(--text-faint); margin-top:3px; font-family:var(--font-mono);}
   .list-row-x{width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--text-faint); flex-shrink:0;}
   .list-row-x svg{width:16px; height:16px;}
@@ -985,12 +985,10 @@ function toast(msg){
   clearTimeout(window.__toastTimer);
   window.__toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
 }
-function timeAgo(ts){
-  const s = Math.floor((Date.now()-ts)/1000);
-  if(s<60) return 'baru saja';
-  if(s<3600) return Math.floor(s/60)+' menit lalu';
-  if(s<86400) return Math.floor(s/3600)+' jam lalu';
-  return Math.floor(s/86400)+' hari lalu';
+function formatTanggal(ts){
+  const bulanSingkat = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const d = new Date(ts);
+  return `${d.getDate()} ${bulanSingkat[d.getMonth()]} ${d.getFullYear()}`;
 }
 function driveIdFromUrl(url){
   if(!url) return null;
@@ -1485,7 +1483,7 @@ function continueCard(h, a){
     </div>
     <div class="continue-body">
       <div class="continue-title">${esc(a.title)}</div>
-      <div class="continue-ep">Episode ${h.episodeNumber} · ${timeAgo(h.timestamp)}</div>
+      <div class="continue-ep">Episode ${h.episodeNumber} · ${formatTanggal(h.timestamp)}</div>
     </div>
   </a>`;
 }
@@ -2476,7 +2474,7 @@ function renderHistory(){
             <div class="list-row-poster"><img src="${esc(x.a.poster)}" onerror="this.src='https://placehold.co/400x560/181c25/565c6b?text=No+Image'"></div>
             <div class="list-row-body">
               <div class="list-row-title">${esc(x.a.title)}</div>
-              <div class="list-row-sub">Episode ${x.h.episodeNumber} · ${timeAgo(x.h.timestamp)}</div>
+              <div class="list-row-sub">Episode ${x.h.episodeNumber} · ${formatTanggal(x.h.timestamp)}</div>
             </div>
           </a>
           <button class="list-row-x" data-remove="${x.a.id}">${ICONS.trash}</button>
