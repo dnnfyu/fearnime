@@ -303,7 +303,7 @@
   @keyframes cpSpin{to{transform:translate(-50%,-50%) rotate(360deg);}}
 
   .cp-gesture-layer{position:absolute; inset:0; z-index:4;}
-  .cp-gesture-zone{position:absolute; top:0; bottom:0; width:50%; touch-action:manipulation;}
+  .cp-gesture-zone{position:absolute; top:0; bottom:0; width:50%; touch-action:none;}
   .cp-gesture-left{left:0;}
   .cp-gesture-right{right:0;}
 
@@ -2365,7 +2365,7 @@ function bindPlayerControls(ctx){
       if(qualitySheetOverlay && qualitySheetOverlay.classList.contains('show')) return;
       if(speedSheetOverlay && speedSheetOverlay.classList.contains('show')) return;
       controls.classList.remove('show');
-    }, 3200);
+    }, 6000);
   }
   cpRoot.addEventListener('pointermove', ()=> showControls());
   scheduleHide();
@@ -2405,9 +2405,14 @@ function bindPlayerControls(ctx){
 
   gestureLayer.querySelectorAll('.cp-gesture-zone').forEach(zone=>{
     const side = zone.dataset.side;
-    zone.addEventListener('pointerdown', startHold);
-    zone.addEventListener('pointerup', endHold);
-    zone.addEventListener('pointerleave', endHold);
+    zone.addEventListener('pointerdown', (e)=>{
+      try{ zone.setPointerCapture(e.pointerId); }catch(err){}
+      startHold();
+    });
+    zone.addEventListener('pointerup', (e)=>{
+      try{ zone.releasePointerCapture(e.pointerId); }catch(err){}
+      endHold();
+    });
     zone.addEventListener('pointercancel', endHold);
 
     zone.addEventListener('click', ()=>{
