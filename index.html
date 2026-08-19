@@ -2565,34 +2565,10 @@ function renderSettings(){
       <div class="topbar"><div class="topbar-row">${brandMarkHtml()}<div class="logo" style="margin-left:2px;">PENGATURAN</div></div></div>
       <div class="auth-block" id="authBlock"></div>
       <div class="settings-block">
-        <div class="setting-item">
-          <div>
-            <div class="label">Hapus Riwayat Tontonan</div>
-          </div>
-          <button class="danger-btn" id="clearHistoryBtn">Hapus</button>
-        </div>
-        <div class="setting-item" style="margin-top:10px;">
-          <div>
-            <div class="label">Hapus Favorit</div>
-          </div>
-          <button class="danger-btn" id="clearFavBtn">Hapus</button>
-        </div>
         <div class="about-box">FEARNIME<br>Nonton anime sub Indo, kapan saja.</div>
       </div>
     </div>
   `;
-  document.getElementById('clearHistoryBtn').addEventListener('click', ()=>{
-    if(confirm('Hapus semua riwayat tontonan? Tindakan ini tidak bisa dibatalkan.')){
-      DB.saveHistory([]);
-      toast('Riwayat berhasil dihapus');
-    }
-  });
-  document.getElementById('clearFavBtn').addEventListener('click', ()=>{
-    if(confirm('Hapus semua favorit? Tindakan ini tidak bisa dibatalkan.')){
-      DB.saveFavorites([]);
-      toast('Favorit berhasil dihapus');
-    }
-  });
   renderAuthUI();
 }
 
