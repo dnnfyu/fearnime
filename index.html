@@ -1463,7 +1463,6 @@ function animeCard(a){
     <div class="poster-wrap">
       <img src="${esc(a.poster)}" alt="${esc(a.title)}" loading="lazy" onerror="this.src='https://placehold.co/400x560/181c25/565c6b?text=No+Image'">
       <span class="badge badge-status ${statusCode==='END'?'END':''}">${statusCode}</span>
-      <span class="badge badge-rating">${ICONS.star} ${a.rating!=null?Number(a.rating).toFixed(2):'-'}</span>
       ${ep?`<span class="badge ep-badge">Ep. ${ep}</span>`:''}
     </div>
     <div class="card-title">${esc(a.title)}</div>
