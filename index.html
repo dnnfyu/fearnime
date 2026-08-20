@@ -1612,11 +1612,13 @@ window.addEventListener('scroll', ()=>{
 
 function updateBottomNav(routeName){
   const nav = document.getElementById('bottomNav');
-  const showNav = routeName==='home';
+  const hideOn = ['detail','play'];
+  const showNav = !hideOn.includes(routeName);
   nav.style.display = showNav ? 'block' : 'none';
   document.body.style.paddingBottom = showNav ? '100px' : '0';
+  const shown = ['home','all','history','favorites','settings'].includes(routeName) ? routeName : 'home';
   nav.querySelectorAll('.nav-btn').forEach(btn=>{
-    btn.classList.toggle('active', btn.dataset.route===routeName);
+    btn.classList.toggle('active', btn.dataset.route===shown);
   });
 }
 document.getElementById('bottomNav').addEventListener('click', e=>{
