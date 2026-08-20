@@ -2534,9 +2534,9 @@ function renderHistory(){
 
   app.innerHTML = `
     <div class="page">
-      <div class="topbar"><div class="topbar-row">${brandMarkHtml()}<div class="logo" style="margin-left:2px;">RIWAYAT</div></div></div>
+      <div class="topbar"><div class="topbar-row">${brandMarkHtml()}</div></div>
       ${!loggedIn ? loginRequiredBlockHtml('Login dengan akun Google kamu untuk melihat dan menyimpan riwayat tontonan.') : items.length ? `
-      <div style="padding:14px 14px 0;"><button class="danger-btn" id="clearAllHistoryBtn">Hapus Semua Riwayat</button></div>
+      <div style="padding:20px 14px 4px;"><button class="danger-btn" id="clearAllHistoryBtn">Hapus Semua Riwayat</button></div>
       <div>${items.map(x=>`
         <div class="list-row" data-id="${x.a.id}">
           <a href="javascript:void(0)" onclick="tryWatchEpisode('${x.a.id}', ${x.h.episodeNumber})" style="display:flex; gap:12px; flex:1; min-width:0; align-items:center;">
@@ -2584,9 +2584,9 @@ function renderFavorites(){
   const items = favIds.map(id=>DB.getAnime(id)).filter(Boolean);
   app.innerHTML = `
     <div class="page">
-      <div class="topbar"><div class="topbar-row">${brandMarkHtml()}<div class="logo" style="margin-left:2px;">FAVORIT</div></div></div>
+      <div class="topbar"><div class="topbar-row">${brandMarkHtml()}</div></div>
       ${!loggedIn ? loginRequiredBlockHtml('Login dengan akun Google kamu untuk melihat dan menyimpan favorit.') : items.length ? `
-      <div style="padding:14px 14px 0;"><button class="danger-btn" id="clearAllFavBtn">Hapus Semua Favorit</button></div>
+      <div style="padding:20px 14px 4px;"><button class="danger-btn" id="clearAllFavBtn">Hapus Semua Favorit</button></div>
       <div>${items.map(a=>`
         <div class="list-row" data-id="${a.id}">
           <a href="#/detail/${a.id}" style="display:flex; gap:12px; flex:1; min-width:0; align-items:center;">
