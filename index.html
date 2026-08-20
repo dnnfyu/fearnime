@@ -2380,7 +2380,7 @@ function bindPlayerControls(ctx){
       controls.classList.remove('show');
     }, 6000);
   }
-  cpRoot.addEventListener('pointermove', ()=> showControls());
+  cpRoot.addEventListener('pointermove', (e)=>{ if(e.pointerType==='mouse') showControls(); });
   scheduleHide();
 
   const gestureLayer = document.getElementById('gestureLayer');
@@ -2418,8 +2418,10 @@ function bindPlayerControls(ctx){
 
   gestureLayer.querySelectorAll('.cp-gesture-zone').forEach(zone=>{
     const side = zone.dataset.side;
+    let wasVisibleBeforeTap = false;
     zone.addEventListener('pointerdown', (e)=>{
       try{ zone.setPointerCapture(e.pointerId); }catch(err){}
+      wasVisibleBeforeTap = controls.classList.contains('show');
       startHold();
     });
     zone.addEventListener('pointerup', (e)=>{
@@ -2439,7 +2441,7 @@ function bindPlayerControls(ctx){
       } else {
         tapTimeout[side] = setTimeout(()=>{
           tapTimeout[side] = null;
-          if(controls.classList.contains('show')) controls.classList.remove('show');
+          if(wasVisibleBeforeTap) controls.classList.remove('show');
           else showControls();
         }, 260);
       }
