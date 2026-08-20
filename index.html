@@ -2250,7 +2250,7 @@ function bindPlayerControls(ctx){
       const nowStretch = cpRoot.classList.toggle('cp-stretch');
       fitBtn.classList.toggle('active', nowStretch);
       safeSetItem('fearnime_player_fit', nowStretch ? 'stretch' : 'fit');
-      toast(nowStretch ? 'Layar disesuaikan penuh' : 'Video ukuran asli');
+      toast(nowStretch ? 'Layar penuh (tepi sedikit terpotong)' : 'Video utuh (tanpa terpotong)');
     });
   }
   const controls = document.getElementById('cpControls');
