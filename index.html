@@ -287,7 +287,7 @@
   /* ---------- Custom Video Player ---------- */
   .cp-root{position:absolute; inset:0; background:#000; overflow:hidden; touch-action:manipulation;}
   .cp-root video{width:100%; height:100%; object-fit:contain; background:#000; display:block;}
-  .cp-root.cp-stretch video{object-fit:cover;}
+  .cp-root.cp-stretch video{object-fit:fill;}
   .cp-mini-btn#cpFitBtn.active{color:var(--accent);}
   .cp-center-play{
     display:none;
@@ -759,7 +759,7 @@
      tanpa aturan ini, object-fit:contain di atas selalu menimpa balik. */
   .player-frame-wrap:fullscreen .cp-root.cp-stretch video,
   .player-frame-wrap:-webkit-full-screen .cp-root.cp-stretch video{
-    object-fit:cover;
+    object-fit:fill;
   }
   .player-frame-wrap:fullscreen .gesture-layer{ bottom:0; }
   @media(orientation:landscape) and (max-height:520px){
@@ -2250,7 +2250,7 @@ function bindPlayerControls(ctx){
       const nowStretch = cpRoot.classList.toggle('cp-stretch');
       fitBtn.classList.toggle('active', nowStretch);
       safeSetItem('fearnime_player_fit', nowStretch ? 'stretch' : 'fit');
-      toast(nowStretch ? 'Layar penuh (tepi sedikit terpotong)' : 'Video utuh (tanpa terpotong)');
+      toast(nowStretch ? 'Layar penuh (video sedikit meregang)' : 'Video utuh (tanpa terpotong)');
     });
   }
   const controls = document.getElementById('cpControls');
