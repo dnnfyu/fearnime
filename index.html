@@ -706,11 +706,19 @@
     :root{ --app-max:980px; }
     .grid{grid-template-columns:repeat(6,1fr);}
     .continue-card{width:210px;}
+    .bottom-nav{height:76px;}
+    .nav-btn .nav-icon, .nav-btn-circle{width:44px; height:44px;}
+    .nav-btn .nav-icon svg, .nav-btn-circle svg{width:23px; height:23px;}
+    .nav-btn .nav-label{font-size:11.5px;}
   }
   @media(min-width:1200px){
     :root{ --app-max:1180px; }
     .grid{grid-template-columns:repeat(7,1fr);}
     .continue-card{width:240px;}
+    .bottom-nav{height:82px;}
+    .nav-btn .nav-icon, .nav-btn-circle{width:48px; height:48px;}
+    .nav-btn .nav-icon svg, .nav-btn-circle svg{width:25px; height:25px;}
+    .nav-btn .nav-label{font-size:12.5px;}
   }
   @media(min-width:1600px){
     :root{ --app-max:1420px; }
@@ -1604,11 +1612,11 @@ window.addEventListener('scroll', ()=>{
 
 function updateBottomNav(routeName){
   const nav = document.getElementById('bottomNav');
-  const shown = ['home','all','history','favorites','settings'].includes(routeName) ? routeName : 'home';
-  nav.style.display = (routeName==='play') ? 'none' : 'block';
-  document.body.style.paddingBottom = (routeName==='play') ? '0' : '86px';
+  const showNav = routeName==='home';
+  nav.style.display = showNav ? 'block' : 'none';
+  document.body.style.paddingBottom = showNav ? '100px' : '0';
   nav.querySelectorAll('.nav-btn').forEach(btn=>{
-    btn.classList.toggle('active', btn.dataset.route===shown);
+    btn.classList.toggle('active', btn.dataset.route===routeName);
   });
 }
 document.getElementById('bottomNav').addEventListener('click', e=>{
