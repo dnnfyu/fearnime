@@ -287,8 +287,6 @@
   /* ---------- Custom Video Player ---------- */
   .cp-root{position:absolute; inset:0; background:#000; overflow:hidden; touch-action:manipulation;}
   .cp-root video{width:100%; height:100%; object-fit:contain; background:#000; display:block;}
-  .cp-root.cp-stretch video{object-fit:fill;}
-  .cp-mini-btn#cpFitBtn.active{color:var(--accent);}
   .cp-center-play{
     display:none;
   }
@@ -754,12 +752,6 @@
   .player-frame-wrap:-webkit-full-screen video,
   .player-frame-wrap:-webkit-full-screen iframe{
     width:100%; height:100%; object-fit:contain;
-  }
-  /* Mode "stretch" harus tetap menang walau lagi fullscreen asli —
-     tanpa aturan ini, object-fit:contain di atas selalu menimpa balik. */
-  .player-frame-wrap:fullscreen .cp-root.cp-stretch video,
-  .player-frame-wrap:-webkit-full-screen .cp-root.cp-stretch video{
-    object-fit:fill;
   }
   .player-frame-wrap:fullscreen .gesture-layer{ bottom:0; }
   @media(orientation:landscape) and (max-height:520px){
@@ -2105,7 +2097,6 @@ function videoPlayerHtml(url, ctx){
               <button class="cp-mini-btn" id="cpForwardBtn">${ICONS.seekFwd}</button>
               ${availableQ.length ? `<button class="cp-quality-pill" id="cpQualityBtn">${esc(qualityGroupLabel(currentQuality))}</button>` : ''}
               <button class="cp-mini-btn" id="cpSpeedBtn">${ICONS.gauge}</button>
-              <button class="cp-mini-btn" id="cpFitBtn" title="Sesuaikan layar">${ICONS.stretch}</button>
             </div>
           </div>
         </div>
@@ -2238,21 +2229,9 @@ function bindPlayerControls(ctx){
   if(!cpRoot) return;
 
   const video = document.getElementById('mainVideo');
-  const fitBtn = document.getElementById('cpFitBtn');
-  if(fitBtn){
-    // Ingat pilihan user (fit/stretch) supaya kepakai lagi di episode berikutnya.
-    const savedFit = localStorage.getItem('fearnime_player_fit');
-    if(savedFit === 'stretch'){
-      cpRoot.classList.add('cp-stretch');
-      fitBtn.classList.add('active');
-    }
-    fitBtn.addEventListener('click', ()=>{
-      const nowStretch = cpRoot.classList.toggle('cp-stretch');
-      fitBtn.classList.toggle('active', nowStretch);
-      safeSetItem('fearnime_player_fit', nowStretch ? 'stretch' : 'fit');
-      toast(nowStretch ? 'Layar penuh (video sedikit meregang)' : 'Video utuh (tanpa terpotong)');
-    });
-  }
+  // Bersihkan pilihan mode "stretch" lama (fitur ini sudah dihapus) supaya
+  // video selalu tampil utuh & proporsional (object-fit:contain).
+  localStorage.removeItem('fearnime_player_fit');
   const controls = document.getElementById('cpControls');
   const centerPlay = document.getElementById('cpCenterPlay');
   const spinner = document.getElementById('cpSpinner');
