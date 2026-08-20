@@ -444,8 +444,16 @@
   .cp-sheet-item.active svg{color:var(--accent);}
 
   @media(orientation:landscape) and (max-height:520px){
-    .cp-top-bar{padding:8px 10px;}
-    .cp-bottom-bar{padding:6px 10px 10px;}
+    .cp-top-bar{padding:10px 18px;}
+    .cp-bottom-bar{padding:8px 18px 16px;}
+    .cp-seek-row{gap:12px; margin-bottom:10px;}
+    .cp-time{font-size:12px; min-width:38px;}
+    .cp-actions-row{gap:30px;}
+    .cp-mini-btn{width:36px; height:36px;}
+    .cp-mini-btn svg{width:20px; height:20px;}
+    .cp-play-round{width:54px; height:54px;}
+    .cp-play-round svg{width:25px; height:25px;}
+    .cp-quality-pill{padding:7px 16px; font-size:12.5px;}
   }
 
   /* ---------- History / Favorites list rows ---------- */
@@ -2170,10 +2178,20 @@ function bindPlayerControls(ctx){
   const fsBtn = document.getElementById('fullscreenBtn');
   const fsBtn2 = document.getElementById('cpFsBtn2');
   function toggleFullscreen(){
-    if(!document.fullscreenElement){
-      (frameWrap.requestFullscreen || frameWrap.webkitRequestFullscreen || frameWrap.mozRequestFullScreen || function(){}).call(frameWrap);
+    if(!isFullscreenActive()){
+      const el = frameWrap;
+      const reqFn = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+      if(reqFn){
+        const result = reqFn.call(el);
+        if(result && result.catch) result.catch(()=> toast('Fullscreen tidak didukung browser ini'));
+      } else if(video.webkitEnterFullscreen){
+        // Fallback khusus iOS Safari: hanya elemen <video> yang bisa fullscreen native
+        video.webkitEnterFullscreen();
+      } else {
+        toast('Fullscreen tidak didukung browser ini');
+      }
     } else {
-      (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || function(){}).call(document);
+      safeExitFullscreen(()=>{});
     }
   }
   if(fsBtn) fsBtn.addEventListener('click', toggleFullscreen);
