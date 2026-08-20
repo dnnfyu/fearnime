@@ -755,6 +755,12 @@
   .player-frame-wrap:-webkit-full-screen iframe{
     width:100%; height:100%; object-fit:contain;
   }
+  /* Mode "stretch" harus tetap menang walau lagi fullscreen asli —
+     tanpa aturan ini, object-fit:contain di atas selalu menimpa balik. */
+  .player-frame-wrap:fullscreen .cp-root.cp-stretch video,
+  .player-frame-wrap:-webkit-full-screen .cp-root.cp-stretch video{
+    object-fit:cover;
+  }
   .player-frame-wrap:fullscreen .gesture-layer{ bottom:0; }
   @media(orientation:landscape) and (max-height:520px){
     .player-page .player-frame-wrap:not(:fullscreen){
