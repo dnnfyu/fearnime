@@ -127,6 +127,13 @@
   .section-sub{font-size:11px; color:var(--text-faint); font-family:var(--font-mono); margin-top:2px;}
   .section-actions{display:flex; align-items:center; gap:8px; flex-shrink:0;}
   .see-all{font-size:11.5px; font-weight:700; color:var(--accent); font-family:var(--font-mono); white-space:nowrap;}
+  .see-all-btn{
+    width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-dim); flex-shrink:0;
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  }
+  .see-all-btn svg{width:16px; height:16px;}
+  .see-all-btn:active{background:var(--card-hover);}
   .mini-refresh{
     width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
     background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-dim); flex-shrink:0;
@@ -1773,7 +1780,7 @@ function renderHome(){
         <div class="section-head">
           <div><div class="section-title"><span class="dot"></span>Lanjut Nonton</div></div>
           <div class="section-actions">
-            <a class="see-all" href="#/history">Lihat Semua</a>
+            <a class="see-all-btn" href="#/history" title="Lihat Semua">${ICONS.chevRight}</a>
           </div>
         </div>
         <div class="hscroll" id="rowContinue">${continueItems.map(x=>continueCard(x.h,x.a)).join('')}</div>
@@ -1783,7 +1790,7 @@ function renderHome(){
         <div class="section-head">
           <div><div class="section-title"><span class="dot"></span>Trending Hari Ini</div></div>
           <div class="section-actions">
-            <a class="see-all" href="#/browse/trending">Lihat Semua</a>
+            <a class="see-all-btn" href="#/browse/trending" title="Lihat Semua">${ICONS.chevRight}</a>
           </div>
         </div>
         ${trending.length ? `<div class="hscroll" id="rowTrending">${trending.map(animeCard).join('')}</div>` : `
@@ -1795,7 +1802,7 @@ function renderHome(){
           <div><div class="section-title"><span class="dot"></span>Rekomendasi</div></div>
           <div class="section-actions">
             <button class="mini-refresh" id="refreshRecommend" title="Acak ulang">${ICONS.refresh}</button>
-            <a class="see-all" href="#/browse/recommend">Lihat Semua</a>
+            <a class="see-all-btn" href="#/browse/recommend" title="Lihat Semua">${ICONS.chevRight}</a>
           </div>
         </div>
         ${recommended.length ? `<div class="hscroll" id="rowRecommend">${recommended.map(animeCard).join('')}</div>` : `
@@ -1808,7 +1815,7 @@ function renderHome(){
         <div class="section-head">
           <div><div class="section-title"><span class="dot"></span>Baru Ditambahkan</div></div>
           <div class="section-actions">
-            <a class="see-all" href="#/browse/newest">Lihat Semua</a>
+            <a class="see-all-btn" href="#/browse/newest" title="Lihat Semua">${ICONS.chevRight}</a>
           </div>
         </div>
         ${newest.length ? `<div class="hscroll" id="rowNewest">${newest.map(animeCard).join('')}</div>` : ''}
