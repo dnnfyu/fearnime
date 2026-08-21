@@ -519,6 +519,60 @@
   .update-info-divider{height:1px; background:var(--border); margin:18px 0 14px;}
   .update-info-footer{font-size:13px; color:var(--text-faint); text-align:center; font-style:italic;}
   .danger-btn{padding:9px 16px; border-radius:8px; background:var(--accent-dim); color:var(--accent); font-weight:700; font-size:12.5px; border:1px solid var(--accent);}
+
+  /* ---------- Notifikasi (lonceng) ---------- */
+  .notif-btn-wrap{position:relative;}
+  .notif-dot{
+    position:absolute; top:8px; right:8px; width:9px; height:9px; border-radius:50%;
+    background:var(--accent); border:2px solid #0b0a17; display:none;
+  }
+  .notif-dot.show{display:block;}
+  .notif-overlay{
+    position:fixed; inset:0; z-index:400; display:none; align-items:flex-start; justify-content:center; padding:20px;
+    background:rgba(8,6,18,.55);
+    backdrop-filter:blur(14px) saturate(150%); -webkit-backdrop-filter:blur(14px) saturate(150%);
+  }
+  .notif-overlay.show{display:flex;}
+  .notif-modal{
+    width:100%; max-width:400px; max-height:82vh; overflow-y:auto; position:relative; margin-top:64px;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14); border-radius:20px;
+    padding:18px 16px 20px;
+    backdrop-filter:blur(26px) saturate(180%); -webkit-backdrop-filter:blur(26px) saturate(180%);
+    box-shadow:0 24px 70px rgba(0,0,0,.5);
+    animation:fadein .28s ease;
+  }
+  .notif-modal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .notif-modal-title{font-family:var(--font-display); font-size:22px; letter-spacing:.5px; color:var(--text);}
+  .notif-modal-close{
+    width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.08); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center; color:var(--text-dim); flex-shrink:0;
+  }
+  .notif-modal-close svg{width:16px; height:16px;}
+  .notif-modal-close:active{background:var(--card-hover);}
+  .notif-list{display:flex; flex-direction:column; gap:10px;}
+  .notif-item{
+    background:var(--card); border:1px solid var(--border); border-radius:14px; padding:13px 14px;
+    display:flex; gap:11px; align-items:flex-start;
+  }
+  .notif-item.unread{border-color:var(--accent); background:var(--accent-dim);}
+  .notif-item-ic{
+    width:36px; height:36px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    background:var(--bg-elevated); border:1px solid var(--border); color:var(--accent);
+  }
+  .notif-item-ic svg{width:17px; height:17px;}
+  .notif-item-body{flex:1; min-width:0;}
+  .notif-item-title{font-size:13.5px; font-weight:700; color:var(--text); line-height:1.35;}
+  .notif-item-msg{font-size:12.5px; color:var(--text-dim); line-height:1.5; margin-top:4px; white-space:pre-line;}
+  .notif-item-time{font-size:10.5px; color:var(--text-faint); font-family:var(--font-mono); margin-top:7px;}
+  .notif-claim-btn{
+    margin-top:10px; padding:9px 14px; border-radius:8px; background:linear-gradient(135deg, #7c5cff, #5b3df0);
+    color:#fff; font-weight:800; font-size:12.5px; display:inline-flex; align-items:center; gap:6px;
+  }
+  .notif-claim-btn:active{transform:scale(.96);}
+  .notif-claim-btn.claimed{background:var(--card); color:var(--text-faint); border:1px solid var(--border);}
+  .notif-empty{text-align:center; padding:36px 10px 8px; color:var(--text-faint);}
+  .notif-empty svg{width:40px; height:40px; margin-bottom:10px; opacity:.5;}
+  .notif-empty .big{font-family:var(--font-display); font-size:19px; color:var(--text-dim); display:block; margin-bottom:4px;}
   .about-box{margin-top:16px; text-align:center; padding:20px 0; color:var(--text-faint); font-size:11.5px; font-family:var(--font-mono); line-height:1.8;}
 
   .genre-chip-row{display:flex; gap:9px; overflow-x:auto; padding:0 14px 4px; cursor:grab; user-select:none;}
@@ -862,6 +916,7 @@
 <div class="toast" id="toast"></div>
 <div class="maintenance-overlay" id="maintenanceOverlay"></div>
 <div class="update-info-overlay" id="updateInfoOverlay"></div>
+<div class="notif-overlay" id="notifOverlay"></div>
 <div class="ad-gate-overlay" id="adGateOverlay">
   <div class="ad-gate-box">
     <button class="ad-gate-close" id="adGateCloseBtn">&times;</button>
@@ -927,6 +982,9 @@ const DB_KEY_TICKET_EVENT = 'fearnime_ticket_event';
 const DB_KEY_CLAIMED_EVENTS = 'fearnime_claimed_events';
 const DB_KEY_GENRES = 'fearnime_genres';
 const DB_KEY_RESOLUTIONS = 'fearnime_resolutions';
+const DB_KEY_NOTIF_STATE = 'fearnime_notif_state';
+const NOTIF_TTL_MS = 24 * 60 * 60 * 1000; // notifikasi otomatis hilang setelah 24 jam
+const NOTIF_POLL_MS = 45 * 1000; // polling notifikasi baru tiap 45 detik selama app terbuka
 const SEED_RESOLUTIONS = ['360p','480p','720p','1080p'];
 const DB_KEY_USER = 'fearnime_user';
 const GOOGLE_CLIENT_ID = '427132462258-6n8i6j3j0f97lts084fp5hvsrrpjj2vp.apps.googleusercontent.com';
@@ -949,6 +1007,7 @@ const CACHE = {
   adSlots: [],
   announcement: {enabled:false, text:''},
   ticketEvent: null,
+  notifications: [],
   loaded: false
 };
 async function apiGet(path){
@@ -958,7 +1017,7 @@ async function apiGet(path){
 }
 async function loadRemoteData(){
   try{
-    const [animes, genres, resolutions, settings, adSettings, adSlots, announcement, ticketEvent] = await Promise.all([
+    const [animes, genres, resolutions, settings, adSettings, adSlots, announcement, ticketEvent, notifications] = await Promise.all([
       apiGet('/api/animes'),
       apiGet('/api/genres'),
       apiGet('/api/resolutions'),
@@ -966,7 +1025,8 @@ async function loadRemoteData(){
       apiGet('/api/ad-settings'),
       apiGet('/api/ad-slots'),
       apiGet('/api/announcement'),
-      apiGet('/api/ticket-event')
+      apiGet('/api/ticket-event'),
+      apiGet('/api/notifications')
     ]);
     CACHE.animes = animes || [];
     CACHE.genres = genres && genres.length ? genres : [...SEED_GENRES];
@@ -976,6 +1036,7 @@ async function loadRemoteData(){
     CACHE.adSlots = adSlots || [];
     if(announcement) CACHE.announcement = announcement;
     CACHE.ticketEvent = ticketEvent || null;
+    CACHE.notifications = notifications || [];
   }catch(e){
     console.warn('Gagal memuat data dari API, situs jalan dengan data kosong:', e);
   }
@@ -1063,6 +1124,55 @@ const DB = {
   getTicketEvent(){ return CACHE.ticketEvent; },
   getGenres(){ return CACHE.genres; },
   getResolutions(){ return CACHE.resolutions; },
+
+  /* ---------- Notifikasi (bell) ---------- */
+  getNotifications(){
+    // Selalu buang notif yang sudah lewat 24 jam, walau server telat membersihkannya
+    const now = Date.now();
+    return (CACHE.notifications||[]).filter(n=> (now - (n.createdAt||0)) < NOTIF_TTL_MS);
+  },
+  getNotifState(){
+    try{ return JSON.parse(localStorage.getItem(DB_KEY_NOTIF_STATE)) || {}; }
+    catch(e){ return {}; }
+  },
+  saveNotifState(state){ safeSetItem(DB_KEY_NOTIF_STATE, JSON.stringify(state)); },
+  isNotifRead(id){ const s=this.getNotifState(); return !!(s[id] && s[id].read); },
+  isNotifClaimed(id){ const s=this.getNotifState(); return !!(s[id] && s[id].claimed); },
+  markNotifRead(id){
+    const s = this.getNotifState();
+    s[id] = Object.assign({read:true, claimed:false}, s[id], {read:true});
+    this.saveNotifState(s);
+  },
+  markAllNotifRead(){
+    const s = this.getNotifState();
+    this.getNotifications().forEach(n=>{ s[n.id] = Object.assign({read:true, claimed:false}, s[n.id], {read:true}); });
+    this.saveNotifState(s);
+  },
+  claimNotifTicket(id){
+    const n = this.getNotifications().find(x=>x.id===id);
+    if(!n || n.type!=='ticket' || this.isNotifClaimed(id)) return 0;
+    const amount = Math.max(0, parseInt(n.ticketAmount)||0);
+    if(amount>0) this.addTickets(amount);
+    const s = this.getNotifState();
+    s[id] = Object.assign({}, s[id], {read:true, claimed:true});
+    this.saveNotifState(s);
+    return amount;
+  },
+  unreadNotifCount(){
+    return this.getNotifications().filter(n=>!this.isNotifRead(n.id)).length;
+  },
+  pruneNotifState(){
+    // Bersihkan bekas status (read/claimed) untuk notif yang sudah tidak ada lagi / sudah expired,
+    // biar localStorage nggak numpuk terus.
+    const validIds = new Set(this.getNotifications().map(n=>n.id));
+    const s = this.getNotifState();
+    let changed = false;
+    Object.keys(s).forEach(id=>{
+      if(!validIds.has(id)){ delete s[id]; changed = true; }
+    });
+    if(changed) this.saveNotifState(s);
+  },
+
   getUser(){
     try{ return JSON.parse(localStorage.getItem(DB_KEY_USER)) || null; }
     catch(e){ return null; }
@@ -1526,6 +1636,104 @@ function checkTicketEvent(){
 }
 
 /* ============================================================
+   Notifikasi (lonceng) — dikirim admin, auto-hilang 24 jam
+============================================================ */
+let notifPollTimer = null;
+function timeAgo(ts){
+  const diff = Math.max(0, Date.now() - ts);
+  const min = Math.floor(diff/60000);
+  if(min < 1) return 'baru saja';
+  if(min < 60) return `${min} menit lalu`;
+  const hr = Math.floor(min/60);
+  if(hr < 24) return `${hr} jam lalu`;
+  return `${Math.floor(hr/24)} hari lalu`;
+}
+async function refreshNotifications(){
+  try{
+    const list = await apiGet('/api/notifications');
+    CACHE.notifications = list || [];
+  }catch(e){
+    console.warn('Gagal memuat notifikasi:', e);
+    return;
+  }
+  DB.pruneNotifState();
+  updateNotifDot();
+  const overlay = document.getElementById('notifOverlay');
+  if(overlay && overlay.classList.contains('show')) renderNotifPanel();
+}
+function startNotifPolling(){
+  if(notifPollTimer) clearInterval(notifPollTimer);
+  notifPollTimer = setInterval(refreshNotifications, NOTIF_POLL_MS);
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible') refreshNotifications();
+  });
+}
+function openNotifPanel(){
+  renderNotifPanel();
+  const overlay = document.getElementById('notifOverlay');
+  overlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+  refreshNotifications();
+}
+function closeNotifPanel(){
+  const overlay = document.getElementById('notifOverlay');
+  if(overlay){ overlay.classList.remove('show'); overlay.innerHTML = ''; }
+  document.body.style.overflow = '';
+  DB.markAllNotifRead();
+  updateNotifDot();
+}
+function renderNotifPanel(){
+  const overlay = document.getElementById('notifOverlay');
+  if(!overlay) return;
+  const list = DB.getNotifications().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  overlay.innerHTML = `
+    <div class="notif-modal">
+      <div class="notif-modal-head">
+        <div class="notif-modal-title">Notifikasi</div>
+        <button class="notif-modal-close" id="notifCloseBtn">${ICONS.x}</button>
+      </div>
+      ${list.length ? `<div class="notif-list">${list.map(notifItemHtml).join('')}</div>` : `
+        <div class="notif-empty">${ICONS.inboxEmpty}<span class="big">Belum ada notifikasi</span><p>Notifikasi dari admin akan muncul di sini.</p></div>`}
+    </div>
+  `;
+  document.getElementById('notifCloseBtn').addEventListener('click', closeNotifPanel);
+  overlay.addEventListener('click', function onOverlayClick(e){
+    if(e.target === overlay){ closeNotifPanel(); overlay.removeEventListener('click', onOverlayClick); }
+  });
+  overlay.querySelectorAll('[data-claim]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.claim;
+      const amount = DB.claimNotifTicket(id);
+      if(amount>0) toast(`+${amount} tiket didapat!`);
+      renderNotifPanel();
+      updateNotifDot();
+      const badge = document.getElementById('notifDot'); // ticket-badge di halaman lain
+      const ticketBadgeBtn = document.getElementById('ticketBadgeBtn');
+      if(ticketBadgeBtn) ticketBadgeBtn.textContent = `⚡ ${DB.getTickets()} / ${MAX_TICKETS}`;
+    });
+  });
+}
+function notifItemHtml(n){
+  const unread = !DB.isNotifRead(n.id);
+  const isTicket = n.type === 'ticket';
+  const claimed = isTicket && DB.isNotifClaimed(n.id);
+  return `
+    <div class="notif-item ${unread?'unread':''}">
+      <div class="notif-item-ic">${isTicket ? ICONS.ticket : ICONS.bell}</div>
+      <div class="notif-item-body">
+        <div class="notif-item-title">${esc(n.title||'Notifikasi')}</div>
+        ${n.message ? `<div class="notif-item-msg">${esc(n.message)}</div>` : ''}
+        <div class="notif-item-time">${timeAgo(n.createdAt)}</div>
+        ${isTicket ? `
+          <button class="notif-claim-btn ${claimed?'claimed':''}" ${claimed?'disabled':''} data-claim="${esc(n.id)}">
+            ${claimed ? `${ICONS.check} Sudah diklaim` : `${ICONS.ticket} Klaim ${n.ticketAmount||0} Tiket`}
+          </button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
    Icons
 ============================================================ */
 const ICONS = {
@@ -1558,6 +1766,9 @@ const ICONS = {
   gauge:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="14" r="8"/><path d="M9 3h6M5.6 6.6l1.4 1.4M18.4 6.6 17 8"/></svg>',
   stretch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a1 1 0 0 1 1-1h3M21 8V5a1 1 0 0 0-1-1h-3M3 16v3a1 1 0 0 0 1 1h3M21 16v3a1 1 0 0 1-1 1h-3M7 12h10M7 12l2.5-2.5M7 12l2.5 2.5M17 12l-2.5-2.5M17 12l-2.5 2.5"/></svg>',
   download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M12 8v7m0 0-3-3m3 3 3-3"/></svg>',
+  bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
+  ticket:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 3"/></svg>',
+  inboxEmpty:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.4 5.4 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.4-6.6A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.8 1.4Z"/></svg>',
 };
 
 /* ============================================================
@@ -1844,6 +2055,7 @@ function topbarHtml(){
   return `
     <div class="topbar">
       <div class="topbar-row" style="justify-content:flex-end;">
+        <button class="icon-btn notif-btn-wrap" id="notifToggle">${ICONS.bell}<span class="notif-dot" id="notifDot"></span></button>
         <button class="icon-btn" id="searchToggle">${ICONS.search}</button>
       </div>
       <div class="search-wrap" id="searchWrap">
@@ -1862,6 +2074,14 @@ function bindTopbar(){
   });
   if(searchQuery) searchWrap.classList.add('open');
   searchInput.addEventListener('input', e=>{ searchQuery = e.target.value; renderHome(); restoreFocus('searchInput'); });
+  const notifToggle = document.getElementById('notifToggle');
+  if(notifToggle) notifToggle.addEventListener('click', openNotifPanel);
+  updateNotifDot();
+}
+function updateNotifDot(){
+  document.querySelectorAll('#notifDot').forEach(dot=>{
+    dot.classList.toggle('show', DB.unreadNotifCount() > 0);
+  });
 }
 function restoreFocus(id){
   const el = document.getElementById(id);
@@ -2873,6 +3093,8 @@ function hideMaintenanceOverlay(){
     return;
   }
   checkTicketEvent();
+  DB.pruneNotifState();
+  startNotifPolling();
   route();
 })();
 

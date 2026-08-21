@@ -98,6 +98,17 @@
   .pill{padding:1px 8px; border-radius:4px; font-size:10px; font-weight:800;}
   .pill.Ongoing{background:var(--ongoing); color:#2e0a1f;}
   .pill.Completed{background:var(--ended); color:#fff;}
+  .pill.info{background:var(--card); color:var(--text-dim); border:1px solid var(--border);}
+  .pill.ticket{background:var(--ongoing); color:#2e0a1f;}
+
+  .notif-admin-row{
+    display:flex; gap:12px; align-items:flex-start; background:var(--card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:13px 14px;
+  }
+  .notif-admin-body{flex:1; min-width:0;}
+  .notif-admin-title{font-weight:700; font-size:13.5px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .notif-admin-msg{font-size:12px; color:var(--text-dim); margin-top:5px; line-height:1.5; white-space:pre-line;}
+  .notif-admin-meta{font-size:10.5px; color:var(--text-faint); font-family:var(--font-mono); margin-top:7px;}
   .anime-row-actions{display:flex; gap:8px; flex-shrink:0;}
 
   .empty{text-align:center; padding:60px 20px; color:var(--text-faint);}
@@ -212,6 +223,7 @@
     <button data-view="resolutions">Resolusi</button>
     <button data-view="announcement">Pengumuman</button>
     <button data-view="ads">Iklan &amp; Tiket</button>
+    <button data-view="notifications">Notifikasi</button>
     <button data-view="settings">Pengaturan</button>
   </nav>
 </div>
@@ -376,13 +388,13 @@ const CACHE = {
   animes: [], genres: [...SEED_GENRES], resolutions: [...SEED_RESOLUTIONS],
   settings: {logoUrl:'', splashLogoUrl:'', splashTagline:'STREAMING SEREM · SUB INDO', driveProxyBaseUrl:'', maintenanceEnabled:false, maintenanceMessage:'', updateInfoVersion:'', updateInfoNotes:'', updateInfoFooter:''},
   adSettings: {adGateEnabled:false, ticketsPerAd:8, ticketCostPerEpisode:1, vastTagUrl:'', videoPendekUrl:''},
-  adSlots: [], announcement: {enabled:false, text:''}, ticketEvent: null
+  adSlots: [], announcement: {enabled:false, text:''}, ticketEvent: null, notifications: []
 };
 async function loadAdminData(){
-  const [animes, genres, resolutions, settings, adSettings, adSlots, announcement, ticketEvent] = await Promise.all([
+  const [animes, genres, resolutions, settings, adSettings, adSlots, announcement, ticketEvent, notifications] = await Promise.all([
     apiGet('/api/animes'), apiGet('/api/genres'), apiGet('/api/resolutions'),
     apiGet('/api/settings'), apiGet('/api/ad-settings'), apiGet('/api/ad-slots'),
-    apiGet('/api/announcement'), apiGet('/api/ticket-event')
+    apiGet('/api/announcement'), apiGet('/api/ticket-event'), apiGet('/api/notifications')
   ]);
   CACHE.animes = animes || [];
   CACHE.genres = genres && genres.length ? genres : [...SEED_GENRES];
@@ -392,6 +404,7 @@ async function loadAdminData(){
   CACHE.adSlots = adSlots || [];
   if(announcement) CACHE.announcement = announcement;
   CACHE.ticketEvent = ticketEvent || null;
+  CACHE.notifications = notifications || [];
 }
 
 const DB = {
@@ -450,6 +463,16 @@ const DB = {
     CACHE.adSlots = CACHE.adSlots.filter(s=>s.id!==id);
   },
   getTicketEvent(){ return CACHE.ticketEvent; },
+  getNotifications(){ return CACHE.notifications; },
+  async sendNotification(n){
+    const saved = await apiWrite('POST', '/api/admin/notifications', n);
+    CACHE.notifications.unshift(saved);
+    return saved;
+  },
+  async deleteNotification(id){
+    await apiWrite('DELETE', '/api/admin/notifications/' + encodeURIComponent(id));
+    CACHE.notifications = CACHE.notifications.filter(n=>n.id!==id);
+  },
   async saveTicketEvent(ev){
     await apiWrite('PUT', '/api/admin/ticket-event', ev);
     CACHE.ticketEvent = ev;
@@ -1420,6 +1443,120 @@ function renderSettingsPanel(){
    IKLAN & TIKET
 ============================================================ */
 let adSlotEditingId = null;
+/* ============================================================
+   NOTIFIKASI — kirim notifikasi/tiket gratis ke semua user.
+   Otomatis kadaluarsa & terhapus 24 jam setelah dikirim (baik sudah
+   diklaim atau belum) supaya tidak numpuk.
+============================================================ */
+function notifTimeLeftLabel(createdAt){
+  const msLeft = (createdAt||0) + (24*60*60*1000) - Date.now();
+  if(msLeft<=0) return 'segera terhapus';
+  const h = Math.floor(msLeft/3600000);
+  const m = Math.floor((msLeft%3600000)/60000);
+  return `hilang otomatis dlm ${h>0?h+'j ':''}${m}m`;
+}
+function renderNotificationsPanel(){
+  setActiveNav('notifications');
+  const list = [...DB.getNotifications()].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  app.innerHTML = `
+    <div class="form-header"><h2>Notifikasi</h2></div>
+    <div class="panel">
+      <h3><span class="dot"></span>Kirim Notifikasi Baru</h3>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:16px;">
+        Dikirim ke semua pengunjung. Muncul di lonceng notifikasi mereka, dan otomatis terhapus 24 jam
+        setelah dikirim (baik dibaca/diklaim atau tidak) supaya tidak menumpuk.
+      </p>
+      <div class="field">
+        <label>Judul</label>
+        <input id="nt_title" placeholder="Contoh: Event Tiket Gratis 🎉">
+      </div>
+      <div class="field">
+        <label>Pesan</label>
+        <textarea id="nt_message" placeholder="Contoh: Dapatkan 20 tiket gratis untuk merayakan update terbaru!"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Tipe Notifikasi</label>
+          <select id="nt_type">
+            <option value="info">Info biasa (tanpa hadiah)</option>
+            <option value="ticket">Tiket gratis (bisa diklaim user)</option>
+          </select>
+        </div>
+        <div class="field" id="nt_ticket_field" style="display:none;">
+          <label>Jumlah Tiket</label>
+          <input id="nt_ticket_amount" type="number" min="1" value="10">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="sendNotifBtn">Kirim Notifikasi</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="dot"></span>Notifikasi Aktif (${list.length})</h3>
+      ${list.length ? `
+        <div class="anime-table">
+          ${list.map(n=>`
+            <div class="notif-admin-row">
+              <div class="notif-admin-body">
+                <div class="notif-admin-title">
+                  ${esc(n.title||'-')}
+                  <span class="pill ${n.type==='ticket'?'ticket':'info'}">${n.type==='ticket' ? ('🎫 '+(n.ticketAmount||0)+' tiket') : 'Info'}</span>
+                </div>
+                ${n.message ? `<div class="notif-admin-msg">${esc(n.message)}</div>` : ''}
+                <div class="notif-admin-meta">${notifTimeLeftLabel(n.createdAt)}</div>
+              </div>
+              <button class="icon-sq" data-delnotif="${esc(n.id)}" title="Hapus sekarang">${ICONS.trash}</button>
+            </div>
+          `).join('')}
+        </div>
+      ` : `<div class="empty"><span class="big">Belum ada notifikasi aktif</span><p>Notifikasi yang kamu kirim akan tampil di sini sampai 24 jam.</p></div>`}
+    </div>
+  `;
+
+  const typeSel = document.getElementById('nt_type');
+  const ticketField = document.getElementById('nt_ticket_field');
+  typeSel.addEventListener('change', ()=>{
+    ticketField.style.display = typeSel.value==='ticket' ? 'block' : 'none';
+  });
+
+  document.getElementById('sendNotifBtn').addEventListener('click', async ()=>{
+    const title = document.getElementById('nt_title').value.trim();
+    const message = document.getElementById('nt_message').value.trim();
+    const type = typeSel.value;
+    const ticketAmount = type==='ticket' ? (parseInt(document.getElementById('nt_ticket_amount').value)||0) : 0;
+    if(!title){ toast('Judul notifikasi wajib diisi'); return; }
+    if(type==='ticket' && ticketAmount<=0){ toast('Jumlah tiket harus lebih dari 0'); return; }
+    const btn = document.getElementById('sendNotifBtn');
+    btn.disabled = true;
+    try{
+      await DB.sendNotification({ title, message, type, ticketAmount });
+      toast('Notifikasi terkirim ke semua user');
+      renderNotificationsPanel();
+    }catch(e){
+      console.warn(e);
+      toast('Gagal mengirim ke server');
+      btn.disabled = false;
+    }
+  });
+
+  document.querySelectorAll('[data-delnotif]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if(!confirm('Hapus notifikasi ini sekarang?')) return;
+      btn.disabled = true;
+      try{
+        await DB.deleteNotification(btn.dataset.delnotif);
+        toast('Notifikasi dihapus');
+        renderNotificationsPanel();
+      }catch(e){
+        console.warn(e);
+        toast('Gagal menghapus di server');
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
 function renderAdsPanel(){
   setActiveNav('ads');
   const s = DB.getAdSettings();
@@ -1655,6 +1792,7 @@ document.getElementById('adminNav').addEventListener('click', e=>{
   else if(view==='resolutions') renderResolutionsPanel();
   else if(view==='announcement') renderAnnouncementPanel();
   else if(view==='ads'){ adSlotEditingId=null; renderAdsPanel(); }
+  else if(view==='notifications') renderNotificationsPanel();
   else if(view==='settings') renderSettingsPanel();
 });
 
