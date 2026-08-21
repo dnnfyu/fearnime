@@ -374,7 +374,7 @@ function adminLogout(){
 /* ---------- Cache lokal, diisi dari API setelah login ---------- */
 const CACHE = {
   animes: [], genres: [...SEED_GENRES], resolutions: [...SEED_RESOLUTIONS],
-  settings: {logoUrl:'', splashLogoUrl:'', splashTagline:'STREAMING SEREM · SUB INDO', driveProxyBaseUrl:''},
+  settings: {logoUrl:'', splashLogoUrl:'', splashTagline:'STREAMING SEREM · SUB INDO', driveProxyBaseUrl:'', maintenanceEnabled:false, maintenanceMessage:'', updateInfoVersion:'', updateInfoNotes:'', updateInfoFooter:''},
   adSettings: {adGateEnabled:false, ticketsPerAd:8, ticketCostPerEpisode:1, vastTagUrl:'', videoPendekUrl:''},
   adSlots: [], announcement: {enabled:false, text:''}, ticketEvent: null
 };
@@ -1217,8 +1217,30 @@ function renderGenresPanel(){
 function renderSettingsPanel(){
   setActiveNav('settings');
   const s = DB.getSettings();
+  const maintOn = !!s.maintenanceEnabled;
   app.innerHTML = `
     <div class="form-header"><h2>Pengaturan</h2></div>
+
+    <div class="panel" style="${maintOn ? 'border-color:var(--accent); background:var(--accent-dim);' : ''}">
+      <h3><span class="dot"></span>Mode Maintenance</h3>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:16px;">
+        Kalau diaktifkan, pengunjung web maupun aplikasi akan melihat pop-up kaca (glass blur) berisi pesan
+        maintenance dan tidak bisa mengakses isi situs sampai kamu menonaktifkannya lagi. Perubahan berlaku
+        otomatis di sisi pengunjung tanpa perlu update aplikasi.
+      </p>
+      <div class="field" style="display:flex; align-items:center; gap:10px;">
+        <input type="checkbox" id="maint_enabled" ${maintOn?'checked':''} style="width:16px; height:16px;">
+        <label style="margin:0;" for="maint_enabled">Aktifkan Mode Maintenance sekarang</label>
+      </div>
+      <div class="field">
+        <label>Pesan untuk Pengunjung</label>
+        <textarea id="maint_message" placeholder="Contoh: Kami sedang melakukan perbaikan server. Situs akan kembali normal dalam beberapa saat.">${esc(s.maintenanceMessage||'')}</textarea>
+        <div class="hint">Kosongkan untuk memakai pesan bawaan.</div>
+      </div>
+      <div class="form-actions">
+        <button class="btn ${maintOn ? 'btn-danger' : 'btn-primary'}" id="saveMaintenanceBtn">${maintOn ? 'Simpan (Maintenance Aktif)' : 'Simpan Pengaturan'}</button>
+      </div>
+    </div>
 
     <div class="panel">
       <h3><span class="dot"></span>Logo &amp; Loading Screen</h3>
@@ -1240,6 +1262,28 @@ function renderSettingsPanel(){
       </div>
       <div class="form-actions">
         <button class="btn btn-primary" id="saveSiteSettingsBtn">Simpan Tampilan</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="dot"></span>Update Info</h3>
+      <p style="font-size:12.5px; color:var(--text-faint); line-height:1.6; margin-bottom:14px;">
+        Isi catatan pembaruan yang akan tampil di halaman "Update Info" pada menu Pengaturan pengunjung (web &amp; aplikasi).
+      </p>
+      <div class="field">
+        <label>Versi</label>
+        <input id="upd_version" value="${esc(s.updateInfoVersion||'')}" placeholder="Contoh: 2026.4.6">
+      </div>
+      <div class="field">
+        <label>Daftar Perubahan <span style="font-weight:400; color:var(--text-faint);">(satu baris = satu poin)</span></label>
+        <textarea id="upd_notes" style="min-height:130px;" placeholder="Support Android 16 (SDK 36)&#10;Perbaikan Bookmark yang error atau hilang&#10;Update fitur nonton di kualitas SD, HD dan FHD&#10;BugFix">${esc(s.updateInfoNotes||'')}</textarea>
+      </div>
+      <div class="field">
+        <label>Pesan Penutup <span style="font-weight:400; color:var(--text-faint);">(opsional)</span></label>
+        <input id="upd_footer" value="${esc(s.updateInfoFooter||'')}" placeholder="Salam Nonton Fearnime!">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveUpdateInfoBtn">Simpan Update Info</button>
       </div>
     </div>
 
@@ -1275,6 +1319,25 @@ function renderSettingsPanel(){
       <button class="btn btn-danger" id="resetAnimesBtn">Hapus Semua Anime</button>
     </div>
   `;
+  document.getElementById('saveMaintenanceBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('saveMaintenanceBtn');
+    const enabled = document.getElementById('maint_enabled').checked;
+    const message = document.getElementById('maint_message').value.trim();
+    if(enabled && !confirm('Aktifkan Mode Maintenance? Pengunjung web & aplikasi tidak akan bisa mengakses situs sampai kamu nonaktifkan lagi.')) return;
+    btn.disabled = true;
+    try{
+      await DB.saveSettings(Object.assign({}, DB.getSettings(), {
+        maintenanceEnabled: enabled,
+        maintenanceMessage: message
+      }));
+      toast(enabled ? 'Mode Maintenance diaktifkan' : 'Mode Maintenance dinonaktifkan');
+      renderSettingsPanel();
+    }catch(e){
+      console.warn(e);
+      toast('Gagal menyimpan ke server');
+      btn.disabled = false;
+    }
+  });
   document.getElementById('set_logo').addEventListener('input', e=>{
     const p = document.getElementById('logoPreview');
     p.src = e.target.value || DEFAULT_LOGO_URL;
@@ -1291,6 +1354,23 @@ function renderSettingsPanel(){
       }));
       toast('Tampilan disimpan');
       renderAdminBrandMark();
+    }catch(e){
+      console.warn(e);
+      toast('Gagal menyimpan ke server');
+    }finally{
+      btn.disabled = false;
+    }
+  });
+  document.getElementById('saveUpdateInfoBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('saveUpdateInfoBtn');
+    btn.disabled = true;
+    try{
+      await DB.saveSettings(Object.assign({}, DB.getSettings(), {
+        updateInfoVersion: document.getElementById('upd_version').value.trim(),
+        updateInfoNotes: document.getElementById('upd_notes').value.trim(),
+        updateInfoFooter: document.getElementById('upd_footer').value.trim()
+      }));
+      toast('Update Info disimpan');
     }catch(e){
       console.warn(e);
       toast('Gagal menyimpan ke server');
