@@ -584,6 +584,23 @@
   }
   .genre-pill-btn:active{background:var(--card-hover); color:var(--text);}
 
+  .az-row{display:flex; gap:clamp(6px,1.6vw,10px); overflow-x:auto; padding:0 14px 4px; cursor:grab; user-select:none;}
+  .az-row.dragging{cursor:grabbing;}
+  .az-chip{
+    flex-shrink:0; white-space:nowrap; scroll-snap-align:start;
+    padding:clamp(6px,1.8vw,9px) clamp(10px,3vw,16px); border-radius:999px;
+    font-size:clamp(11px,2.8vw,13px); font-weight:700;
+    background:var(--card); border:1px solid var(--border); color:var(--text-dim);
+  }
+  .az-chip:active{background:var(--card-hover); color:var(--text);}
+  .az-chip.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+  @media(min-width:520px){
+    .az-chip{padding:9px 17px; font-size:13.5px;}
+  }
+  @media(min-width:760px){
+    .az-chip{padding:10px 19px; font-size:14.5px;}
+  }
+
   /* ---------- Iklan & Tiket ---------- */
   .ad-banner-wrap{margin:14px 14px 0; border-radius:10px; overflow:hidden; border:1px solid var(--border); background:var(--card); min-height:70px;}
   .ad-banner-wrap iframe{width:100%; height:90px; border:0; display:block;}
@@ -1693,7 +1710,7 @@ function renderNotifPanel(){
         <button class="notif-modal-close" id="notifCloseBtn">${ICONS.x}</button>
       </div>
       ${list.length ? `<div class="notif-list">${list.map(notifItemHtml).join('')}</div>` : `
-        <div class="notif-empty">${ICONS.inboxEmpty}<span class="big">Belum ada notifikasi</span><p>Notifikasi dari admin akan muncul di sini.</p></div>`}
+        <div class="notif-empty">${ICONS.inboxEmpty}<span class="big">Belum ada notifikasi</span></div>`}
     </div>
   `;
   document.getElementById('notifCloseBtn').addEventListener('click', closeNotifPanel);
@@ -1811,6 +1828,7 @@ function continueCard(h, a){
 ============================================================ */
 const app = document.getElementById('app');
 let searchQuery = '';
+let allAnimeLetter = '';
 let recommendOrder = null;
 let trendingOrder = null;
 
@@ -1895,6 +1913,7 @@ function doRoute(){
   if(parts[0]==='detail') return renderDetail(parts[1]);
   if(parts[0]==='play') return renderPlayer(parts[1], parseInt(parts[2]));
   if(parts[0]==='browse') return renderBrowse(parts[1]);
+  if(parts[0]==='search') return renderSearchPage(true);
   if(parts[0]==='all') return renderAllAnime();
   if(parts[0]==='genre') return renderGenre(decodeURIComponent(parts[1]||''));
   if(parts[0]==='history') return renderHistory();
@@ -1921,7 +1940,7 @@ window.addEventListener('scroll', ()=>{
 
 function updateBottomNav(routeName){
   const nav = document.getElementById('bottomNav');
-  const hideOn = ['detail','play'];
+  const hideOn = ['detail','play','search'];
   const showNav = !hideOn.includes(routeName);
   nav.style.display = showNav ? 'block' : 'none';
   document.body.style.paddingBottom = showNav ? '100px' : '0';
@@ -1951,27 +1970,6 @@ function renderHome(){
     const a = DB.getAnime(h.animeId);
     return a ? {h,a} : null;
   }).filter(Boolean).slice(0,10);
-
-  if(searchQuery.trim()){
-    const q = searchQuery.trim().toLowerCase();
-    const results = animes.filter(a=>a.title.toLowerCase().includes(q) || a.genres.join(' ').toLowerCase().includes(q));
-    app.innerHTML = `
-      <div class="page">
-        ${topbarHtml()}
-        ${adBannerHtml()}
-        <div class="section" style="margin-top:16px;">
-          <div class="section-head">
-            <div><div class="section-title"><span class="dot"></span>Hasil Pencarian</div>
-            <div class="section-sub">${results.length} judul ditemukan</div></div>
-          </div>
-          ${results.length ? `<div class="grid">${results.map(animeCard).join('')}</div>` : `
-            <div class="empty"><span class="big">Tidak ditemukan</span><p>Coba kata kunci lain.</p></div>`}
-        </div>
-      </div>
-    `;
-    bindTopbar();
-    return;
-  }
 
   const order = ensureRecommendOrder();
   const recommended = order.map(id=>DB.getAnime(id)).filter(Boolean).slice(0,10);
@@ -2056,24 +2054,12 @@ function topbarHtml(){
     <div class="topbar">
       <div class="topbar-row" style="justify-content:flex-end;">
         <button class="icon-btn notif-btn-wrap" id="notifToggle">${ICONS.bell}<span class="notif-dot" id="notifDot"></span></button>
-        <button class="icon-btn" id="searchToggle">${ICONS.search}</button>
-      </div>
-      <div class="search-wrap" id="searchWrap">
-        <input class="search-input" id="searchInput" placeholder="Cari judul anime atau genre..." value="${esc(searchQuery)}">
+        <a class="icon-btn" href="#/search" id="searchToggle">${ICONS.search}</a>
       </div>
     </div>
   `;
 }
 function bindTopbar(){
-  const searchToggle = document.getElementById('searchToggle');
-  const searchWrap = document.getElementById('searchWrap');
-  const searchInput = document.getElementById('searchInput');
-  searchToggle.addEventListener('click', ()=>{
-    searchWrap.classList.toggle('open');
-    if(searchWrap.classList.contains('open')) setTimeout(()=>searchInput.focus(),150);
-  });
-  if(searchQuery) searchWrap.classList.add('open');
-  searchInput.addEventListener('input', e=>{ searchQuery = e.target.value; renderHome(); restoreFocus('searchInput'); });
   const notifToggle = document.getElementById('notifToggle');
   if(notifToggle) notifToggle.addEventListener('click', openNotifPanel);
   updateNotifDot();
@@ -2086,6 +2072,44 @@ function updateNotifDot(){
 function restoreFocus(id){
   const el = document.getElementById(id);
   if(el){ el.focus(); const v = el.value; el.value=''; el.value=v; }
+}
+
+/* ---------- SEARCH (halaman pencarian + filter A-Z) ---------- */
+function renderSearchPage(autofocus){
+  const animes = DB.getAnimes();
+  const q = searchQuery.trim().toLowerCase();
+
+  let results = animes;
+  if(q){
+    results = results.filter(a=> a.title.toLowerCase().includes(q) || (a.genres||[]).join(' ').toLowerCase().includes(q));
+  }
+  results = [...results].sort((a,b)=> a.title.localeCompare(b.title));
+
+  app.innerHTML = `
+    <div class="page">
+      <div class="topbar">
+        <div class="subpage-topbar">
+          <button class="back-btn-inline" id="backBtn">${ICONS.back}</button>
+          <div style="flex:1;">
+            <input class="search-input" id="searchInput" style="width:100%;" placeholder="Cari judul anime atau genre..." value="${esc(searchQuery)}">
+          </div>
+        </div>
+      </div>
+      <div class="section" style="margin-top:16px;">
+        <div class="section-head">
+          <div><div class="section-title"><span class="dot"></span>Hasil Pencarian</div></div>
+        </div>
+        ${results.length ? `<div class="grid">${results.map(animeCard).join('')}</div>` : `
+          <div class="empty"><span class="big">Tidak ditemukan</span></div>`}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('backBtn').addEventListener('click', ()=> navigate('/home'));
+
+  const searchInput = document.getElementById('searchInput');
+  searchInput.addEventListener('input', e=>{ searchQuery = e.target.value; renderSearchPage(false); restoreFocus('searchInput'); });
+  if(autofocus) setTimeout(()=> searchInput.focus(), 150);
 }
 
 /* ---------- BROWSE ---------- */
@@ -2130,11 +2154,28 @@ function renderBrowse(kind){
 
 /* ---------- SEMUA ANIME ---------- */
 function renderAllAnime(){
-  const animes = [...DB.getAnimes()].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  const letter = allAnimeLetter;
+  let animes = [...DB.getAnimes()].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  if(letter){
+    if(letter==='#'){
+      animes = animes.filter(a=> !/^[a-zA-Z]/.test(a.title.trim()));
+    } else {
+      animes = animes.filter(a=> a.title.trim().toUpperCase().startsWith(letter));
+    }
+    animes = [...animes].sort((a,b)=> a.title.localeCompare(b.title));
+  }
+  const azLetters = ['#','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
   app.innerHTML = `
     <div class="page">
       <div class="topbar"><div class="topbar-row">${brandMarkHtml()}<div class="logo" style="margin-left:2px;">SEMUA ANIME</div></div></div>
       ${genreChipsHtml()}
+      <div class="section">
+        <div class="section-head"><div><div class="section-title"><span class="dot"></span>Cari Berdasarkan A-Z</div></div></div>
+        <div class="az-row" id="azRow">
+          <button class="az-chip${letter==='' ? ' active' : ''}" data-letter="">Semua</button>
+          ${azLetters.map(l=>`<button class="az-chip${letter===l ? ' active' : ''}" data-letter="${l}">${l}</button>`).join('')}
+        </div>
+      </div>
       <div class="section">
         <div class="section-head"><div><div class="section-title"><span class="dot"></span>Katalog Lengkap</div></div></div>
       </div>
@@ -2146,6 +2187,14 @@ function renderAllAnime(){
   `;
   const rowGenres = document.getElementById('rowGenres');
   if(rowGenres) makeDraggable(rowGenres);
+  const azRow = document.getElementById('azRow');
+  azRow.addEventListener('click', e=>{
+    const btn = e.target.closest('.az-chip');
+    if(!btn) return;
+    allAnimeLetter = btn.dataset.letter;
+    renderAllAnime();
+  });
+  makeDraggable(azRow);
 }
 
 /* ---------- GENRE ---------- */
@@ -2933,9 +2982,17 @@ function renderSettings(){
         <button class="setting-item nav-item" id="updateInfoNavBtn">
           <div style="display:flex; align-items:center; gap:12px; min-width:0;">
             <div class="icon-btn" style="width:38px; height:38px; flex-shrink:0;">${ICONS.download}</div>
-            <div style="min-width:0;">
+            <div style="min-width:0; display:flex; align-items:center;">
               <div class="label">Update Info</div>
-              <p>Lihat perubahan &amp; pembaruan terbaru</p>
+            </div>
+          </div>
+          <div style="color:var(--text-faint); flex-shrink:0;">${ICONS.chevRight}</div>
+        </button>
+        <button class="setting-item nav-item" id="clearCacheBtn">
+          <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+            <div class="icon-btn" style="width:38px; height:38px; flex-shrink:0;">${ICONS.trash}</div>
+            <div style="min-width:0; display:flex; align-items:center;">
+              <div class="label">Hapus Cache Aplikasi</div>
             </div>
           </div>
           <div style="color:var(--text-faint); flex-shrink:0;">${ICONS.chevRight}</div>
@@ -2946,6 +3003,27 @@ function renderSettings(){
   `;
   renderAuthUI();
   document.getElementById('updateInfoNavBtn').addEventListener('click', openUpdateInfoModal);
+  document.getElementById('clearCacheBtn').addEventListener('click', handleClearAppCache);
+}
+
+/* ---------- HAPUS CACHE APLIKASI ---------- */
+async function handleClearAppCache(){
+  const btn = document.getElementById('clearCacheBtn');
+  if(btn) btn.style.opacity = '.6';
+  try{
+    if('caches' in window){
+      const names = await caches.keys();
+      await Promise.all(names.map(n=> caches.delete(n)));
+    }
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=> r.update().catch(()=>{})));
+    }
+    toast('Cache aplikasi berhasil dibersihkan');
+  }catch(e){
+    toast('Gagal membersihkan cache');
+  }
+  if(btn) btn.style.opacity = '';
 }
 
 /* ---------- UPDATE INFO (modal popup, glass blur) ---------- */
