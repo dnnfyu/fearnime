@@ -201,19 +201,26 @@
   .fav-btn{position:absolute; top:14px; right:14px; z-index:5; width:38px; height:38px; border-radius:50%; background:rgba(6,20,15,.7); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; border:1px solid var(--border);}
   .fav-btn svg{width:19px; height:19px;}
   .fav-btn.active{color:var(--accent); border-color:var(--accent);}
-  .detail-content{position:relative; margin-top:-64px; padding:0 14px;}
-  .detail-poster-row{display:flex; gap:14px; align-items:flex-end;}
-  .detail-poster{width:104px; flex-shrink:0; border-radius:var(--radius); overflow:hidden; border:2px solid var(--bg); box-shadow:0 8px 24px rgba(0,0,0,.5);}
-  .detail-poster img{aspect-ratio:2/3; object-fit:cover;}
-  .detail-title{font-size:20px; font-weight:800; line-height:1.25; margin-bottom:6px;}
-  .detail-meta-line{font-size:11.5px; color:var(--text-dim); font-family:var(--font-mono); display:flex; flex-wrap:wrap; gap:6px; align-items:center;}
+  .detail-content{position:relative; margin-top:-44px; padding:0 14px;}
+  .detail-poster-center{display:flex; justify-content:center;}
+  .detail-poster-lg{width:min(46vw,190px); flex-shrink:0; border-radius:var(--radius); overflow:hidden; border:2px solid var(--bg); box-shadow:0 10px 28px rgba(0,0,0,.55);}
+  .detail-poster-lg img{width:100%; aspect-ratio:2/3; object-fit:cover; display:block;}
+  .detail-title-center{text-align:center; font-size:19px; font-weight:800; line-height:1.3; margin-top:16px; padding:0 6px;}
+  .detail-meta-line-center{text-align:center; font-size:11.5px; color:var(--text-dim); font-family:var(--font-mono); display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; margin-top:8px;}
+  .meta-sep{color:var(--text-faint);}
   .status-pill{padding:1px 7px; border-radius:4px; font-size:10px; font-weight:800; background:var(--ongoing); color:#06210f;}
   .status-pill.Completed{background:var(--ended); color:#fff;}
+  .detail-rating-center{display:flex; align-items:center; justify-content:center; gap:5px; margin-top:10px; font-family:var(--font-mono); font-weight:800; font-size:13px; color:#ffd23d;}
+  .detail-rating-center svg{width:15px; height:15px;}
 
   .genre-row{display:flex; flex-wrap:wrap; gap:7px; margin-top:14px;}
+  .genre-row.center{justify-content:center;}
   .genre-chip{font-size:11px; padding:4px 11px; border-radius:999px; background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-dim);}
 
-  .synopsis{margin-top:16px; font-size:13.5px; line-height:1.65; color:var(--text-dim);}
+  .detail-card{margin-top:20px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px;}
+  .detail-card-title{font-size:13px; font-weight:800; display:flex; align-items:center; gap:7px;}
+
+  .synopsis{margin-top:10px; font-size:13.5px; line-height:1.65; color:var(--text-dim);}
   .synopsis.clamp{display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;}
   .read-more{color:var(--accent); font-size:12.5px; font-weight:700; margin-top:8px; display:inline-block;}
 
@@ -2222,6 +2229,24 @@ function renderGenre(genre){
 
 /* ---------- DETAIL ---------- */
 let synopsisExpanded = false;
+function normalizeFranchiseTitle(title){
+  return String(title||'')
+    .toLowerCase()
+    .replace(/[:\-\u2013\u2014].*$/, '')
+    .replace(/\bseason\s*\d+\b/gi, '')
+    .replace(/\bs\d+\b/gi, '')
+    .replace(/\bpart\s*\d+\b/gi, '')
+    .replace(/\b(cour|movie|ova|special)\b/gi, '')
+    .replace(/\b(i{1,3}|iv|vi{0,3})\s*$/gi, '')
+    .replace(/\b\d+\b/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+function getRelatedAnime(a){
+  const base = normalizeFranchiseTitle(a.title);
+  if(!base) return [];
+  return DB.getAnimes().filter(x=> x.id!==a.id && normalizeFranchiseTitle(x.title)===base);
+}
 function renderDetail(id){
   const a = DB.getAnime(id);
   if(!a){ app.innerHTML = notFoundBlock(); return; }
@@ -2230,6 +2255,7 @@ function renderDetail(id){
   const lastWatched = animeHistory[0];
   const episodes = [...a.episodes].sort((x,y)=>x.number-y.number);
   const watchedNums = new Set(animeHistory.map(h=>h.episodeNumber));
+  const related = getRelatedAnime(a);
 
   const playTargetEp = lastWatched ? lastWatched.episodeNumber : (episodes[0] ? episodes[0].number : null);
   const playLabel = lastWatched ? `Lanjut Episode ${lastWatched.episodeNumber}` : (episodes.length ? `Mulai Episode ${episodes[0].number}` : 'Belum ada episode');
@@ -2243,31 +2269,38 @@ function renderDetail(id){
         <div class="detail-backdrop-fade"></div>
       </div>
       <div class="detail-content">
-        <div class="detail-poster-row">
-          <div class="detail-poster"><img src="${esc(a.poster)}" onerror="this.src='https://placehold.co/400x560/181c25/565c6b?text=No+Image'"></div>
-          <div style="flex:1; min-width:0;">
-            <div class="detail-title">${esc(a.title)}</div>
-            <div class="detail-meta-line">
-              <span class="status-pill ${a.status}">${a.status==='Ongoing'?'Ongoing':'Completed'}</span>
-              <span>${esc(a.type)}</span> · <span>${esc(a.studio)}</span> · <span>${ICONS.star} ${a.rating!=null?Number(a.rating).toFixed(2):'-'}</span>
-            </div>
-          </div>
+        <div class="detail-poster-center">
+          <div class="detail-poster-lg"><img src="${esc(a.poster)}" onerror="this.src='https://placehold.co/400x560/181c25/565c6b?text=No+Image'"></div>
         </div>
 
-        <div class="genre-row">${a.genres.map(g=>`<span class="genre-chip">${esc(g)}</span>`).join('')}</div>
+        <div class="detail-title-center">${esc(a.title)}</div>
+        <div class="detail-meta-line-center">
+          <span>${esc(a.studio)}</span><span class="meta-sep">|</span><span>${esc(a.type)}</span><span class="meta-sep">|</span><span class="status-pill ${a.status}">${a.status==='Ongoing'?'Ongoing':'Completed'}</span>
+        </div>
+        <div class="genre-row center">${a.genres.map(g=>`<span class="genre-chip">${esc(g)}</span>`).join('')}</div>
+        <div class="detail-rating-center">${ICONS.star} ${a.rating!=null?Number(a.rating).toFixed(2):'-'}</div>
 
-        <div class="synopsis ${synopsisExpanded?'':'clamp'}" id="synopsisEl">${esc(a.synopsis)}</div>
-        <button class="read-more" id="readMoreBtn">${synopsisExpanded?'Sembunyikan':'Baca selengkapnya'}</button>
+        <div class="detail-card">
+          <div class="detail-card-title"><span class="dot"></span>Sinopsis</div>
+          <div class="synopsis ${synopsisExpanded?'':'clamp'}" id="synopsisEl">${esc(a.synopsis)}</div>
+          <button class="read-more" id="readMoreBtn">${synopsisExpanded?'Sembunyikan':'Baca selengkapnya'}</button>
+          <div class="section-sub" style="margin-top:14px;">Total Episode: ${a.totalEpisode || episodes.length || '-'}</div>
+        </div>
 
-        <div class="section-sub" style="margin-top:14px;">Total Episode: ${a.totalEpisode || episodes.length || '-'}</div>
+        ${related.length ? `
+        <div class="section" style="margin-top:20px;">
+          <div class="section-head" style="padding:0 0 10px;">
+            <div><div class="section-title"><span class="dot"></span>Anime Terkait</div></div>
+          </div>
+          <div class="hscroll" id="rowRelated" style="margin:0 -14px; padding-left:14px; padding-right:14px;">${related.map(animeCard).join('')}</div>
+        </div>` : ''}
 
         <button class="play-btn" id="playBtn" ${playTargetEp==null?'style="opacity:.4;pointer-events:none;"':''}>
           ${ICONS.play} ${playLabel}
         </button>
 
         <div class="ep-list-head">
-          <div class="section-title" style="font-size:14px;"><span class="dot"></span>Daftar Episode</div>
-          <div class="ep-count">${episodes.length} episode</div>
+          <div class="section-title" style="font-size:14px;"><span class="dot"></span>Episode (${episodes.length})</div>
         </div>
         <div class="ep-list">
           ${episodes.length ? episodes.map(e=>`
@@ -2282,7 +2315,6 @@ function renderDetail(id){
           `).join('') : `<div class="empty" style="padding:30px 10px;"><p>Belum ada episode yang tersedia.</p></div>`}
         </div>
       </div>
-      ${ticketBadgeHtml(false)}
     </div>
   `;
 
@@ -2303,8 +2335,10 @@ function renderDetail(id){
   if(playBtn && playTargetEp!=null){
     playBtn.addEventListener('click', ()=> tryWatchEpisode(a.id, playTargetEp));
   }
-  bindTicketBadge();
+  const rowRelated = document.getElementById('rowRelated');
+  if(rowRelated) makeDraggable(rowRelated);
 }
+
 function notFoundBlock(){
   return `<div class="page"><div class="empty" style="margin-top:60px;">
     <span class="big">Data tidak ditemukan</span>
