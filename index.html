@@ -2124,11 +2124,11 @@ function renderSearchPage(autofocus){
   const animes = DB.getAnimes();
   const q = searchQuery.trim().toLowerCase();
 
-  let results = animes;
+  let results = [];
   if(q){
-    results = results.filter(a=> a.title.toLowerCase().includes(q) || (a.genres||[]).join(' ').toLowerCase().includes(q));
+    results = animes.filter(a=> a.title.toLowerCase().includes(q) || (a.genres||[]).join(' ').toLowerCase().includes(q));
+    results = [...results].sort((a,b)=> a.title.localeCompare(b.title));
   }
-  results = [...results].sort((a,b)=> a.title.localeCompare(b.title));
 
   app.innerHTML = `
     <div class="page">
@@ -2140,13 +2140,14 @@ function renderSearchPage(autofocus){
           </div>
         </div>
       </div>
+      ${q ? `
       <div class="section" style="margin-top:16px;">
         <div class="section-head">
           <div><div class="section-title"><span class="dot"></span>Hasil Pencarian</div></div>
         </div>
         ${results.length ? `<div class="grid">${results.map(animeCard).join('')}</div>` : `
           <div class="empty"><span class="big">Tidak ditemukan</span></div>`}
-      </div>
+      </div>` : ''}
     </div>
   `;
 
