@@ -20,21 +20,21 @@
 <script src="https://cdn.jsdelivr.net/npm/videojs-vast-vpaid@2.8.0/bin/videojs_vast_vpaid.min.js"></script>
 <style>
   :root{
-    --bg:#0d0b1a;
+    --bg:#0c0d16;
     --app-max:860px;
     --app-gutter:14px;
-    --bg-elevated:rgba(236,72,153,.10);
-    --card:rgba(180,150,255,.07);
-    --card-hover:rgba(236,72,153,.15);
-    --border:rgba(130,110,190,.22);
-    --text:#f1eefb;
-    --text-dim:#b3a9d6;
-    --text-faint:#6f6591;
-    --accent:#ec4899;
-    --accent-dim:#ec48992e;
-    --accent-2:#f472b6;
-    --ongoing:#f472b6;
-    --ended:#544a72;
+    --bg-elevated:rgba(124,92,255,.10);
+    --card:rgba(148,130,255,.07);
+    --card-hover:rgba(124,92,255,.15);
+    --border:rgba(124,92,255,.22);
+    --text:#eeeaff;
+    --text-dim:#a79fcf;
+    --text-faint:#6b6390;
+    --accent:#7c5cff;
+    --accent-dim:#7c5cff2e;
+    --accent-2:#9b82ff;
+    --ongoing:#9b82ff;
+    --ended:#4a4468;
     --radius:10px;
     --font-display:'Bebas Neue', sans-serif;
     --font-body:'Inter', sans-serif;
@@ -42,11 +42,11 @@
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{
-    background-color:#0b0a17;
+    background-color:#0a0a12;
     background-image:
-      radial-gradient(34% 26% at 86% 10%, rgba(236,72,153,.24) 0%, rgba(236,72,153,0) 72%),
-      radial-gradient(26% 20% at 5% 96%, rgba(99,80,210,.20) 0%, rgba(99,80,210,0) 72%),
-      radial-gradient(55% 42% at 50% -10%, rgba(45,30,85,.45) 0%, rgba(45,30,85,0) 68%);
+      radial-gradient(34% 26% at 86% 10%, rgba(124,92,255,.22) 0%, rgba(124,92,255,0) 72%),
+      radial-gradient(26% 20% at 5% 96%, rgba(90,70,200,.18) 0%, rgba(90,70,200,0) 72%),
+      radial-gradient(55% 42% at 50% -10%, rgba(40,28,80,.45) 0%, rgba(40,28,80,0) 68%);
     background-repeat:no-repeat;
     background-attachment:fixed, fixed, fixed;
     color:var(--text); font-family:var(--font-body); -webkit-tap-highlight-color:transparent;
@@ -67,7 +67,7 @@
   /* ---------- Announcement bar ---------- */
   .announce-bar{
     display:flex; align-items:center; gap:10px; padding:10px 14px;
-    background:rgba(236,72,153,.14); border-bottom:1px solid rgba(236,72,153,.3);
+    background:rgba(124,92,255,.14); border-bottom:1px solid rgba(124,92,255,.3);
     backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   }
   .announce-bar .ic{color:var(--accent); flex-shrink:0;}
@@ -388,7 +388,7 @@
   .cp-seek-played{position:absolute; left:0; top:50%; transform:translateY(-50%); height:3px; border-radius:2px; background:var(--accent); width:0%;}
   .cp-seek-thumb{
     position:absolute; top:50%; left:0%; width:12px; height:12px; border-radius:50%; background:var(--accent);
-    transform:translate(-50%,-50%); box-shadow:0 0 0 4px rgba(236,72,153,.22);
+    transform:translate(-50%,-50%); box-shadow:0 0 0 4px rgba(124,92,255,.22);
   }
   .cp-actions-row{display:flex; align-items:center; justify-content:center; gap:24px;}
   .cp-mini-btn{
@@ -449,7 +449,7 @@
     background:rgba(255,255,255,.05); border:1px solid var(--border); margin-bottom:8px; color:#fff;
   }
   .cp-sheet-item:active{background:rgba(255,255,255,.1);}
-  .cp-sheet-item.active{border-color:var(--accent); background:rgba(236,72,153,.14);}
+  .cp-sheet-item.active{border-color:var(--accent); background:rgba(124,92,255,.14);}
   .cp-sheet-item svg{width:15px; height:15px; flex-shrink:0; color:var(--text-faint);}
   .cp-sheet-num{
     width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,.08); display:flex; align-items:center;
@@ -670,7 +670,7 @@
   .nav-btn .nav-icon svg{width:20px; height:20px;}
   .nav-btn .nav-label{font-size:10px; font-weight:700; letter-spacing:.2px; transition:color .18s ease;}
   .nav-btn.active{color:#fff;}
-  .nav-btn.active:not(.home-btn) .nav-icon{background:rgba(236,72,153,.22);}
+  .nav-btn.active:not(.home-btn) .nav-icon{background:rgba(124,92,255,.22);}
 
   .nav-btn-circle{
     width:38px; height:38px; border-radius:50%;
@@ -682,7 +682,7 @@
   }
   .nav-btn-circle svg{width:20px; height:20px; color:inherit;}
   .nav-btn.home-btn.active .nav-btn-circle{
-    background:rgba(236,72,153,.22);
+    background:rgba(124,92,255,.22);
     box-shadow:none;
   }
   @keyframes navIconPop{
@@ -754,7 +754,7 @@
   .auth-login-card .auth-login-sub{font-size:12px; color:var(--text-faint); margin-bottom:16px; line-height:1.5;}
   #googleSignInBtnWrap{display:flex; justify-content:center;}
   .auth-profile-card{
-    background:linear-gradient(160deg, rgba(236,72,153,.12), rgba(180,150,255,.06));
+    background:linear-gradient(160deg, rgba(124,92,255,.12), rgba(148,130,255,.06));
     border:1px solid var(--border); border-radius:14px; padding:0; overflow:hidden;
     backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
   }
