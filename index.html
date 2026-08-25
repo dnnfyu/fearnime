@@ -151,9 +151,9 @@
   @media(min-width:760px){.grid{grid-template-columns:repeat(5,1fr);}}
 
   /* ---------- Card ---------- */
-  .card{width:118px; flex-shrink:0; scroll-snap-align:start;}
+  .card{width:118px; flex-shrink:0; scroll-snap-align:start; background:var(--card); border:1px solid var(--border); border-radius:calc(var(--radius) + 4px); padding:8px;}
   .grid .card{width:auto;}
-  .poster-wrap{position:relative; border-radius:var(--radius); overflow:hidden; height:0; padding-top:150%; aspect-ratio:2/3; background:var(--card); border:1px solid var(--border);}
+  .poster-wrap{position:relative; border-radius:8px; overflow:hidden; height:0; padding-top:150%; aspect-ratio:2/3; background:var(--bg-elevated);}
   .poster-wrap img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none;}
   .badge{position:absolute; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px; font-family:var(--font-mono);}
   .badge-status{top:6px; left:6px; background:var(--ongoing); color:#06210f;}
@@ -161,8 +161,27 @@
   .badge-rating{top:6px; right:6px; background:var(--accent); color:#fff; display:flex; align-items:center; gap:2px;}
   .star-ic{color:#ffd23d;}
   .ep-badge{bottom:6px; right:6px; background:rgba(0,0,0,.72); color:#fff; padding:2px 6px;}
-  .card-title{font-size:12.5px; font-weight:700; margin-top:7px; line-height:1.3;}
+  .fav-remove-btn{position:absolute; top:6px; right:6px; z-index:3; width:26px; height:26px; border-radius:50%; background:rgba(0,0,0,.65); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; color:#fff; border:none;}
+  .fav-remove-btn svg{width:13px; height:13px;}
+  .fav-remove-btn:active{background:var(--accent);}
+  .card-title{font-size:12.5px; font-weight:700; margin-top:8px; line-height:1.3;}
   .card-type{font-size:10.5px; color:var(--text-faint); margin-top:2px; font-family:var(--font-mono); text-transform:uppercase;}
+
+  /* ---------- Anime list card (Semua Anime) ---------- */
+  .alc-list{display:flex; flex-direction:column; gap:12px; padding:0 14px;}
+  .alc{display:flex; gap:14px; padding:14px; background:var(--card); border:1px solid var(--border); border-radius:calc(var(--radius) + 4px);}
+  .alc-poster{width:76px; flex-shrink:0; border-radius:8px; overflow:hidden; aspect-ratio:2/3; background:var(--bg-elevated);}
+  .alc-poster img{width:100%; height:100%; object-fit:cover; display:block;}
+  .alc-body{flex:1; min-width:0;}
+  .alc-badges{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:7px;}
+  .alc-badge{font-size:10px; font-weight:800; padding:2px 9px; border-radius:999px; background:var(--bg-elevated); color:var(--text-dim); font-family:var(--font-mono);}
+  .alc-badge-status{background:var(--accent-dim); color:var(--accent-2);}
+  .alc-title{font-size:14px; font-weight:800; line-height:1.3; margin-bottom:6px;}
+  .alc-genres{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;}
+  .alc-genre-chip{font-size:10px; padding:2px 9px; border-radius:999px; background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-dim);}
+  .alc-meta{font-size:11.5px; color:var(--text-dim); font-family:var(--font-mono); margin-bottom:6px;}
+  .alc-dot{color:var(--text-faint);}
+  .alc-synopsis{font-size:12px; line-height:1.55; color:var(--text-faint); display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;}
 
   /* ---------- Continue watching ---------- */
   .continue-card{width:150px; flex-shrink:0; scroll-snap-align:start; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;}
@@ -194,8 +213,8 @@
 
   /* ---------- Detail page ---------- */
   .detail-hero{position:relative; height:clamp(280px,78vw,380px); overflow:hidden;}
-  .detail-backdrop{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:blur(22px) brightness(.55); transform:scale(1.18);}
-  .detail-backdrop-fade{position:absolute; inset:0; background:linear-gradient(180deg, rgba(8,8,14,.10) 0%, rgba(8,8,14,.32) 55%, var(--bg) 100%);}
+  .detail-backdrop{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:blur(8px) brightness(.85); transform:scale(1.08);}
+  .detail-backdrop-fade{position:absolute; inset:0; background:linear-gradient(180deg, rgba(8,8,14,0) 0%, rgba(8,8,14,0) 60%, var(--bg) 100%);}
   .back-btn{position:absolute; top:14px; left:14px; z-index:5; width:38px; height:38px; border-radius:50%; background:rgba(6,20,15,.7); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; border:1px solid var(--border);}
   .back-btn svg{width:19px; height:19px;}
   .fav-btn{position:absolute; top:14px; right:14px; z-index:5; width:38px; height:38px; border-radius:50%; background:rgba(6,20,15,.7); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; border:1px solid var(--border);}
@@ -1812,6 +1831,24 @@ function animeCard(a){
     <div class="card-type">${esc(a.type)}</div>
   </a>`;
 }
+function animeListCard(a){
+  const ep = latestEpisodeNumber(a) || a.totalEpisode || (a.episodes?a.episodes.length:0);
+  const genres = a.genres || [];
+  return `
+  <a class="alc" href="#/detail/${a.id}">
+    <div class="alc-poster"><img src="${esc(a.poster)}" alt="${esc(a.title)}" loading="lazy" onerror="this.src='https://placehold.co/400x560/181c25/565c6b?text=No+Image'"></div>
+    <div class="alc-body">
+      <div class="alc-badges">
+        ${ep?`<span class="alc-badge">${ep} Eps</span>`:`<span class="alc-badge">${esc(a.type)}</span>`}
+        <span class="alc-badge alc-badge-status">${esc(a.status)}</span>
+      </div>
+      <div class="alc-title">${esc(a.title)}</div>
+      ${genres.length ? `<div class="alc-genres">${genres.slice(0,3).map(g=>`<span class="alc-genre-chip">${esc(g)}</span>`).join('')}${genres.length>3?`<span class="alc-genre-chip">+${genres.length-3}</span>`:''}</div>` : ''}
+      <div class="alc-meta">${esc(a.studio)} <span class="alc-dot">&bull;</span> <span class="star-ic">&#9733;</span>${a.rating!=null?Number(a.rating).toFixed(2):'-'}</div>
+      ${a.synopsis ? `<div class="alc-synopsis">${esc(a.synopsis)}</div>` : ''}
+    </div>
+  </a>`;
+}
 
 function continueCard(h, a){
   const total = latestEpisodeNumber(a) || a.totalEpisode || 1;
@@ -2187,7 +2224,7 @@ function renderAllAnime(){
         <div class="section-head"><div><div class="section-title"><span class="dot"></span>Katalog Lengkap</div></div></div>
       </div>
       <div class="section" style="margin-top:-8px;">
-        ${animes.length ? `<div class="grid">${animes.map(animeCard).join('')}</div>` : `
+        ${animes.length ? `<div class="alc-list">${animes.map(animeListCard).join('')}</div>` : `
         <div class="empty"><span class="big">Belum ada anime</span><p>Anime yang ditambahkan akan muncul di sini.</p></div>`}
       </div>
     </div>
@@ -2966,16 +3003,16 @@ function renderFavorites(){
       <div class="topbar"><div class="topbar-row">${brandMarkHtml()}</div></div>
       ${!loggedIn ? loginRequiredBlockHtml('Login dengan akun Google kamu untuk melihat dan menyimpan favorit.') : items.length ? `
       <div style="padding:20px 14px 4px;"><button class="danger-btn" id="clearAllFavBtn">Hapus Semua Favorit</button></div>
-      <div>${items.map(a=>`
-        <div class="list-row" data-id="${a.id}">
-          <a href="#/detail/${a.id}" style="display:flex; gap:12px; flex:1; min-width:0; align-items:center;">
-            <div class="list-row-poster"><img src="${esc(a.poster)}" onerror="this.src='https://placehold.co/400x560/181c25/565c6b?text=No+Image'"></div>
-            <div class="list-row-body">
-              <div class="list-row-title">${esc(a.title)}</div>
-              <div class="list-row-sub">${esc(a.type)} · ${esc(a.status)} · <span class="star-ic">★</span> ${a.rating!=null?Number(a.rating).toFixed(2):'-'}</div>
-            </div>
+      <div class="grid" style="margin-top:16px;">${items.map(a=>`
+        <div class="card">
+          <a class="poster-wrap" href="#/detail/${a.id}">
+            <img src="${esc(a.poster)}" alt="${esc(a.title)}" loading="lazy" onerror="this.src='https://placehold.co/400x560/181c25/565c6b?text=No+Image'">
+            <button class="fav-remove-btn" data-unfav="${a.id}">${ICONS.trash}</button>
           </a>
-          <button class="list-row-x" data-unfav="${a.id}">${ICONS.trash}</button>
+          <a href="#/detail/${a.id}" style="display:block; text-decoration:none; color:inherit;">
+            <div class="card-title">${esc(a.title)}</div>
+            <div class="card-type">${esc(a.type)}</div>
+          </a>
         </div>
       `).join('')}</div>` : `
       <div class="empty" style="margin-top:60px;">
