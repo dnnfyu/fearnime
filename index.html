@@ -1877,10 +1877,27 @@ let allAnimeLetter = '';
 let recommendOrder = null;
 let trendingOrder = null;
 
+function getDailyResetKey(){
+  const shifted = new Date(Date.now() - 6*60*60*1000);
+  return `${shifted.getFullYear()}-${shifted.getMonth()+1}-${shifted.getDate()}`;
+}
+function loadDailyOrder(storageKey, ids){
+  const dayKey = getDailyResetKey();
+  try{
+    const saved = JSON.parse(localStorage.getItem(storageKey)||'null');
+    if(saved && saved.day===dayKey && Array.isArray(saved.order) && saved.order.length===ids.length && ids.every(id=>saved.order.includes(id))){
+      return saved.order;
+    }
+  }catch(e){}
+  const order = shuffle(ids);
+  try{ localStorage.setItem(storageKey, JSON.stringify({day:dayKey, order})); }catch(e){}
+  return order;
+}
+
 function ensureRecommendOrder(){
   const ids = DB.getAnimes().map(a=>a.id);
   if(!recommendOrder || recommendOrder.length!==ids.length || !ids.every(id=>recommendOrder.includes(id))){
-    recommendOrder = shuffle(ids);
+    recommendOrder = loadDailyOrder('fn_recommend_order', ids);
   }
   return recommendOrder;
 }
@@ -1888,7 +1905,7 @@ function ensureRecommendOrder(){
 function ensureTrendingOrder(){
   const ids = DB.getAnimes().map(a=>a.id);
   if(!trendingOrder || trendingOrder.length!==ids.length || !ids.every(id=>trendingOrder.includes(id))){
-    trendingOrder = shuffle(ids);
+    trendingOrder = loadDailyOrder('fn_trending_order', ids);
   }
   return trendingOrder;
 }
@@ -2088,7 +2105,9 @@ function renderHome(){
   if(refreshBtn){
     refreshBtn.addEventListener('click', ()=>{
       refreshBtn.classList.add('spin');
-      recommendOrder = shuffle(DB.getAnimes().map(a=>a.id));
+      const ids = DB.getAnimes().map(a=>a.id);
+      recommendOrder = shuffle(ids);
+      try{ localStorage.setItem('fn_recommend_order', JSON.stringify({day:getDailyResetKey(), order:recommendOrder})); }catch(e){}
       setTimeout(()=>{ renderHome(); toast('Rekomendasi diperbarui'); }, 250);
     });
   }
@@ -3006,15 +3025,13 @@ function renderFavorites(){
       ${!loggedIn ? loginRequiredBlockHtml('Login dengan akun Google kamu untuk melihat dan menyimpan favorit.') : items.length ? `
       <div style="padding:20px 14px 4px;"><button class="danger-btn" id="clearAllFavBtn">Hapus Semua Favorit</button></div>
       <div class="grid" style="margin-top:16px;">${items.map(a=>`
-        <div class="fav-card-wrap" style="position:relative;">
-          <a class="card" href="#/detail/${a.id}">
-            <div class="poster-wrap">
-              <img src="${esc(a.poster)}" alt="${esc(a.title)}" loading="lazy" onerror="this.src='https://placehold.co/400x560/181c25/565c6b?text=No+Image'">
-            </div>
-            <div class="card-title">${esc(a.title)}</div>
-          </a>
-          <button class="fav-remove-btn" data-unfav="${a.id}">${ICONS.trash}</button>
-        </div>
+        <a class="card" href="#/detail/${a.id}">
+          <div class="poster-wrap">
+            <img src="${esc(a.poster)}" alt="${esc(a.title)}" loading="lazy" onerror="this.src='https://placehold.co/400x560/181c25/565c6b?text=No+Image'">
+            <button class="fav-remove-btn" data-unfav="${a.id}">${ICONS.trash}</button>
+          </div>
+          <div class="card-title">${esc(a.title)}</div>
+        </a>
       `).join('')}</div>` : `
       <div class="empty" style="margin-top:60px;">
         ${ICONS.heart}
