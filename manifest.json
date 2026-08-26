@@ -5,8 +5,9 @@
   "start_url": "index.html",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0d0a1a",
-  "theme_color": "#0d0a1a",
+  "orientation": "portrait-primary",
+  "background_color": "#0c0d16",
+  "theme_color": "#0c0d16",
   "icons": [
     {
       "src": "launchericon-48x48.png",
