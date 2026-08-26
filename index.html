@@ -2210,7 +2210,7 @@ function renderAllAnime(){
     }
     animes = [...animes].sort((a,b)=> a.title.localeCompare(b.title));
   }
-  const azLetters = ['#','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+  const azLetters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
   app.innerHTML = `
     <div class="page">
       <div class="topbar"><div class="topbar-row">${brandMarkHtml()}<div class="logo" style="margin-left:2px;">SEMUA ANIME</div></div></div>
@@ -3006,15 +3006,14 @@ function renderFavorites(){
       ${!loggedIn ? loginRequiredBlockHtml('Login dengan akun Google kamu untuk melihat dan menyimpan favorit.') : items.length ? `
       <div style="padding:20px 14px 4px;"><button class="danger-btn" id="clearAllFavBtn">Hapus Semua Favorit</button></div>
       <div class="grid" style="margin-top:16px;">${items.map(a=>`
-        <div class="card">
-          <a class="poster-wrap" href="#/detail/${a.id}">
-            <img src="${esc(a.poster)}" alt="${esc(a.title)}" loading="lazy" onerror="this.src='https://placehold.co/400x560/181c25/565c6b?text=No+Image'">
-            <button class="fav-remove-btn" data-unfav="${a.id}">${ICONS.trash}</button>
-          </a>
-          <a href="#/detail/${a.id}" style="display:block; text-decoration:none; color:inherit;">
+        <div class="fav-card-wrap" style="position:relative;">
+          <a class="card" href="#/detail/${a.id}">
+            <div class="poster-wrap">
+              <img src="${esc(a.poster)}" alt="${esc(a.title)}" loading="lazy" onerror="this.src='https://placehold.co/400x560/181c25/565c6b?text=No+Image'">
+            </div>
             <div class="card-title">${esc(a.title)}</div>
-            <div class="card-type">${esc(a.type)}</div>
           </a>
+          <button class="fav-remove-btn" data-unfav="${a.id}">${ICONS.trash}</button>
         </div>
       `).join('')}</div>` : `
       <div class="empty" style="margin-top:60px;">
